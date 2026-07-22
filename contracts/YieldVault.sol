@@ -41,12 +41,13 @@ contract YieldVault {
         owner = _owner;
     }
 
-    // One-time wiring: PoolEscrow's address isn't known until after it's
-    // deployed (it takes this vault's address in its own constructor), so
-    // this is set once, right after both contracts are deployed.
+    // Owner-only, re-settable rather than one-time: PoolEscrow's address
+    // isn't known until after it's deployed (it takes this vault's address
+    // in its own constructor), so this gets set right after both contracts
+    // deploy — and re-settable means a future PoolEscrow fix/redeploy can
+    // rewire the same vault instead of needing a fresh one too.
     function setPoolEscrow(address _poolEscrow) external {
         require(msg.sender == owner, "not owner");
-        require(poolEscrow == address(0), "already set");
         require(_poolEscrow != address(0), "zero address");
         poolEscrow = _poolEscrow;
     }

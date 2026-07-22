@@ -124,6 +124,12 @@ contract PoolEscrow {
         emit Refunded(poolId, msg.sender, amount);
     }
 
+    // Needed so this contract can accept the plain value transfer the vault
+    // sends back in withdrawAll() — a contract with no receive()/fallback()
+    // rejects bare value sends (empty calldata) even if it has other
+    // payable functions like contribute().
+    receive() external payable {}
+
     function getPool(uint256 poolId) external view returns (
         address recipient,
         uint256 targetAmount,

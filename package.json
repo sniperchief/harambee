@@ -20,6 +20,7 @@
     "contracts:wire-vault": "tsx scripts/wire-vault.ts",
     "contracts:read-pool-escrow": "tsx scripts/read-pool-escrow.ts",
     "contracts:read-yield-vault": "tsx scripts/read-yield-vault.ts",
+    "contracts:fund-vault-reserve": "tsx scripts/fund-vault-reserve.ts",
     "test:yield-vault": "hardhat test"
   },
   "dependencies": {

@@ -2,7 +2,41 @@
 
 Group-pooling payments app on Circle's Arc L1. Built in strict, small, confirmed-before-proceeding steps. This file is the handoff doc — if the chat/context resets, read this first, then the numbered steps in the original prompt, to know exactly where things stand.
 
-**Status: Steps 1–6.5 done and confirmed working. Step 7 is next.**
+**Status: Steps 1–8 done and confirmed working. Step 9 (StableFX) is next.**
+
+## Full test walkthrough (pool creation → contribute → release/refund)
+
+Run `npm run dev` first, and prefix any `npm run` command with `$env:ComSpec = "C:\Windows\System32\cmd.exe"` if it silently does nothing (see gotcha below). Known funded wallets: Wallet A `699d7c8f-2f9e-5a74-83d1-f6054bf376c6`, Wallet B `fa99f41e-145c-5dbb-a4f5-53e728ceddfc` (address `0x1a8d0bbae8d8eb23cc031f3cf51d04de99463dc6`). Get more wallet ids anytime via `npm run circle:list-wallets`.
+
+**1. Get a creator id** (any existing `users.id` works — pool creation just needs a valid FK, it doesn't have to be the wallet submitting the on-chain call):
+```
+npm run test:db
+```
+
+**2. Create a pool:**
+```
+curl -X POST http://localhost:3000/api/pools -H "Content-Type: application/json" -d "{\"creatorId\":\"<user-id>\",\"walletId\":\"699d7c8f-2f9e-5a74-83d1-f6054bf376c6\",\"title\":\"My Pool\",\"targetAmount\":\"0.5\",\"deadline\":\"2026-08-01T00:00:00Z\",\"recipientWalletAddress\":\"0x1a8d0bbae8d8eb23cc031f3cf51d04de99463dc6\"}"
+```
+Copy the returned `pool.id` (Supabase UUID) — every step below needs it. `targetAmount` is a human decimal string (e.g. `"0.5"`), not wei. `deadline` is any ISO 8601 timestamp in the future.
+
+**3. Contribute** (repeatable, from any wallet — each `walletId` becomes a distinct on-chain contributor):
+```
+curl -X POST http://localhost:3000/api/pools/<pool-id>/contribute -H "Content-Type: application/json" -d "{\"walletId\":\"699d7c8f-2f9e-5a74-83d1-f6054bf376c6\",\"amount\":\"0.3\"}"
+```
+
+**4a. Release path** — once `current_amount >= targetAmount`:
+```
+curl -X POST http://localhost:3000/api/pools/<pool-id>/check-release -H "Content-Type: application/json" -d "{\"walletId\":\"699d7c8f-2f9e-5a74-83d1-f6054bf376c6\"}"
+```
+Expect `{"status":"released","finalValue":"...","txHash":"0x..."}` — the recipient wallet's balance should jump by exactly `finalValue`.
+
+**4b. Refund path** — instead, create a pool with a short deadline (a minute or two out) and contribute under target; once the deadline passes, call the same `check-release` endpoint (expect `"status":"refunded"`), then each contributor claims their own share:
+```
+curl -X POST http://localhost:3000/api/pools/<pool-id>/refund -H "Content-Type: application/json" -d "{\"walletId\":\"<their-wallet-id>\"}"
+```
+Expect `refundedAmount` slightly above their original contribution (their share of accrued yield).
+
+**Extras**: `npm run contracts:read-pool-escrow` / `contracts:read-yield-vault` to sanity-check on-chain state directly; `npm run contracts:fund-vault-reserve -- <walletId> <amount>` if a release/refund ever reverts with `"withdraw failed"` (means the vault's simulated yield needs a real top-up to actually pay out — see Step 6.5 gotcha below).
 
 ## Environment gotchas (read this before debugging anything that "doesn't work")
 
@@ -65,11 +99,35 @@ Testing: fast-forwarded-time test lives in `test/YieldVault.test.ts`, run via `n
 
 Confirmed working: both Hardhat tests pass (linear interest matches the formula exactly; `withdrawAll` correctly checkpoints and pays out principal+yield). Both contracts deployed to Arc testnet, wired, and read-verified — `getPrincipal(0)`/`getAccruedYield(0)` both `0` (no pool has contributed yet), `getPool(0)` returns a correctly-decoded zeroed 6-tuple.
 
-### Steps 7–10 — not started
-- **Step 7**: wire Steps 2–6.5 together end to end (create pool → Supabase + contract; contribute → Gas Station-sponsored tx + Supabase update). Decision needed/flagged when we get there: webhook vs direct-confirmation for updating Supabase after a contribution.
-- **Step 8**: threshold/deadline release + refund logic. Remember to `fundReserve()` the deployed vault before testing this (see gotcha above), or `withdrawAll` will revert. Decision needed: cron/poll vs event-driven trigger.
+### Step 7 — Contribute-to-pool flow ✅
+`POST /api/pools` — snapshots the contract's `nextPoolId` before calling `createPool` on-chain (avoids needing to decode event logs to learn the assigned id), then inserts the Supabase row with that real `onchain_pool_id` already attached. `POST /api/pools/[id]/contribute` — calls `contribute` on-chain from whichever `walletId` is given (its address becomes the on-chain contributor — deliberately decoupled from `contributorId`, which is optional and purely for Supabase bookkeeping), then re-reads `getPool` from the contract and writes that authoritative `current_amount` into Supabase rather than doing arithmetic in JS. `lib/poolEscrow.ts` — shared ABI/address helper, reused by Step 8's routes too.
+
+**Contributors in testing = Step 5's wallets, not Step 3/4 user wallets** — flagged/chosen because the contract needs a distinct on-chain `msg.sender` per contributor, and Step 5's SCA test wallets already have proven Gas Station sponsorship working; Step 3 wallets are EOA (no sponsorship) and Step 4's Modular Wallets would need a whole separate client-side bundler/paymaster flow. Real user-wallet integration is a later polish item, not required by this step's test target.
+
+Confirmed working: created a pool, contributed from two distinct wallets (0.3 + 0.2), on-chain `getPool` and Supabase `current_amount` both showed `0.5`, and separately confirmed the vault's `getPrincipal`/`getAccruedYield` proved contributions are auto-forwarded into it (no separate deposit step needed — that's just what `contribute()` already does per Step 6.5).
+
+### Step 8 — Threshold/deadline release and refund ✅
+`lib/poolRelease.ts` — `checkAndReleasePool(poolId, onchainPoolId, walletId)`: calls `checkAndRelease` on-chain, re-syncs Supabase (`status`, `current_amount`) from the contract's own post-call state. `POST /api/pools/[id]/check-release` — manual per-pool trigger. `POST /api/cron/check-pools` — the actual **poll** mechanism: queries Supabase for all `status='open'` pools, checks each on-chain (`currentAmount >= targetAmount` or `deadline` passed), and calls `checkAndReleasePool` for any that qualify. In production an external scheduler (Vercel Cron) would hit this on an interval.
+
+**Poll chosen over event-driven**, flagged: an on-chain log subscription needs a long-lived WebSocket connection, and Circle webhooks need a public endpoint + signature verification — both awkward fits for serverless deployment. Polling is stateless/idempotent (a no-op when nothing's changed).
+
+`POST /api/pools/[id]/refund` — takes the contributor's own `walletId` (required, since `refund()`'s `msg.sender` determines both the payout amount *and* destination — this can't be triggered on someone's behalf by a different wallet). Predicts the payout via `contributions(poolId, address) * finalValue / currentAmount` read fresh from the contract (bigint math, no float rounding) before submitting, so the expected amount is exact. Deliberately does **not** try to update `pool_contributions` rows on refund (we don't track wallet address there, only optional `contributor_id`) — the verifiable outcome is the on-chain balance change, checked directly, not an off-chain ledger row. Documented simplification for Step 10.
+
+**Real bug found and fixed during testing**: `checkAndRelease` reverted with `"withdraw failed"` every time. Root cause — `YieldVault.withdrawAll()` sends funds back to `PoolEscrow` via a bare `.call{value: total}("")` (empty calldata), but `PoolEscrow.sol` had **no `receive()` function** — a contract without one rejects plain value transfers outright, even if it has other payable functions like `contribute()`. First suspected it was the [vault-reserve-funding gotcha](#step-65--yield-vault-) instead (added `contracts:fund-vault-reserve -- <walletId> <amount>` script for that, which is still useful/needed) — that was a real but *different* problem; fixing it alone didn't resolve this one. Fix: added `receive() external payable {}` to `PoolEscrow.sol`.
+
+Fixing this required a full redeploy of **both** contracts (a new `PoolEscrow` needs new bytecode; `YieldVault.setPoolEscrow` was write-once so a stuck vault would've needed redeploying too — changed it to be freely re-settable by the owner at any time, so a future `PoolEscrow`-only fix won't force a vault redeploy again). **This orphaned the Step 7 test pool** (Supabase row `994a2185-eb56-4a40-961f-f2d47cee35ca`, on-chain pool 0 in the *old*, now-abandoned `PoolEscrow` deployment) — its on-chain state is stale/unreachable through the app now that `POOL_ESCROW_CONTRACT_ADDRESS` points elsewhere; harmless testnet funds, just ignore that row going forward. New contract addresses are current in `.env.local`.
+
+Confirmed working, both scenarios, on the redeployed contracts:
+- **Release**: pool created, contributed over target from two wallets (total `1.1`), `check-release` returned `{"status":"released","finalValue":"1.100001945713460469",...}`, and the recipient wallet's actual balance increase was verified on ArcScan (its "Internal Transactions" tab, not the regular "Transactions" tab — SCA wallets show `0` transaction count on explorers since they don't originate top-level transactions the traditional way; the incoming value shows as an internal transfer/delegatecall instead, but the balance still lands on the wallet's own address, not the delegatecall target).
+- **Refund**: pool created with a short deadline, contributed under target (`0.8` total vs. `5` target), waited for the deadline, `check-release` returned `{"status":"refunded","finalValue":"0.800000767059886742",...}`, and both wallets successfully called `/refund` and received their principal + proportional yield share back.
+
+One new gotcha hit mid-testing: after redeploying a *fresh* `YieldVault`, its reserve was empty again (the fund-vault-reserve fix from Step 6.5 was for the old, now-abandoned vault) — hit `"withdraw failed"` again for this reason specifically (not the `receive()` bug, which was already fixed) until `contracts:fund-vault-reserve` was run again against the new vault address. **Any time either contract gets redeployed, the new vault needs a fresh `fundReserve()` top-up before release/refund will work.**
+
+A dev-server crash also occurred mid-testing — this one in Next.js's Rust-based compiler (Turbopack/SWC: `Fatal process out of memory: Zone`), distinct from the earlier Node/V8 heap OOM crash from Step 4. Same cause (long-running dev session building up memory pressure on this machine) and same fix (`npm run dev` again).
+
+### Steps 9–10 — not started
 - **Step 9**: StableFX conversion at release time.
-- **Step 10**: wrap-up summary — what's real vs stubbed/faked for the demo. The yield vault's fixed/invented APY (not a real market rate, and requires manual reserve funding to actually pay out) belongs on this list.
+- **Step 10**: wrap-up summary — what's real vs stubbed/faked for the demo. Belongs on this list: the yield vault's fixed/invented APY (not a real market rate, needs manual `fundReserve()` top-ups to actually pay out), the orphaned Step 7 test pool, and the lack of per-refund `pool_contributions` bookkeeping.
 
 ## Env vars currently populated (see `.env.local.example` for the full list + where to get each)
 Done: Supabase (URL/anon/service-role), `CIRCLE_API_KEY`, `CIRCLE_ENTITY_SECRET`, `CIRCLE_WALLET_SET_ID`, `NEXT_PUBLIC_CIRCLE_CLIENT_KEY`, `NEXT_PUBLIC_CIRCLE_CLIENT_URL`, Arc RPC/chain-id/explorer, `POOL_ESCROW_CONTRACT_ADDRESS`, `YIELD_VAULT_CONTRACT_ADDRESS`.
