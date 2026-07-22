@@ -1,0 +1,232 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_owner",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "poolId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newPrincipal",
+          "type": "uint256"
+        }
+      ],
+      "name": "Deposited",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "ReserveFunded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "poolId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Withdrawn",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "APY_BPS",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "poolId",
+          "type": "uint256"
+        }
+      ],
+      "name": "deposit",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "fundReserve",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "poolId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getAccruedYield",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "poolId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getPrincipal",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "poolEscrow",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "positions",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "principal",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "lastUpdate",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_poolEscrow",
+          "type": "address"
+        }
+      ],
+      "name": "setPoolEscrow",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "poolId",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawAll",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "total",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x60a060405234801561000f575f5ffd5b5060405161080b38038061080b83398101604081905261002e9161008a565b6001600160a01b0381166100795760405162461bcd60e51b815260206004820152600e60248201526d1bdddb995c881c995c5d5a5c995960921b604482015260640160405180910390fd5b6001600160a01b03166080526100b7565b5f6020828403121561009a575f5ffd5b81516001600160a01b03811681146100b0575f5ffd5b9392505050565b6080516107366100d55f395f818160ff01526102bf01526107365ff3fe60806040526004361061008f575f3560e01c8063958e2d3111610057578063958e2d311461015757806399fbab8814610176578063b6b55f25146101bd578063da4779e0146101d0578063e3363d4e146101fb575f5ffd5b806324d09a8f146100935780636f9c3c8f146100c55780637092b7d2146100cf5780638da5cb5b146100ee578063929565dc14610139575b5f5ffd5b34801561009e575f5ffd5b506100b26100ad366004610646565b610210565b6040519081526020015b60405180910390f35b6100cd61027d565b005b3480156100da575f5ffd5b506100cd6100e936600461065d565b6102b4565b3480156100f9575f5ffd5b506101217f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b0390911681526020016100bc565b348015610144575f5ffd5b505f54610121906001600160a01b031681565b348015610162575f5ffd5b506100b2610171366004610646565b6103c9565b348015610181575f5ffd5b506101a8610190366004610646565b600160208190525f9182526040909120805491015482565b604080519283526020830191909152016100bc565b6100cd6101cb366004610646565b6104ff565b3480156101db575f5ffd5b506100b26101ea366004610646565b5f9081526001602052604090205490565b348015610206575f5ffd5b506100b26101f481565b5f8181526001602052604081208054820361022d57505f92915050565b5f81600101544261023e919061069e565b90506102506301e133806127106106b7565b82548290610261906101f4906106b7565b61026b91906106b7565b61027591906106ce565b949350505050565b60405134815233907fb52b99b9e83551fcbd069b559cc3e823e2a1a3bad8ece46561ea77524394c8509060200160405180910390a2565b336001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000161461031d5760405162461bcd60e51b81526020600482015260096024820152683737ba1037bbb732b960b91b60448201526064015b60405180910390fd5b5f546001600160a01b0316156103635760405162461bcd60e51b815260206004820152600b60248201526a185b1c9958591e481cd95d60aa1b6044820152606401610314565b6001600160a01b0381166103a85760405162461bcd60e51b815260206004820152600c60248201526b7a65726f206164647265737360a01b6044820152606401610314565b5f80546001600160a01b0319166001600160a01b0392909216919091179055565b5f80546001600160a01b031633146104155760405162461bcd60e51b815260206004820152600f60248201526e6e6f7420706f6f6c20657363726f7760881b6044820152606401610314565b61041e82610604565b505f818152600160205260408120805491905580156104c0576040515f90339083908381818185875af1925050503d805f8114610476576040519150601f19603f3d011682016040523d82523d5f602084013e61047b565b606091505b50509050806104be5760405162461bcd60e51b815260206004820152600f60248201526e1dda5d1a191c985dc819985a5b1959608a1b6044820152606401610314565b505b817f0c875c8d391179c5cf7ad8303d268efd50b8beb78b671f85cd54bfb91eb8ef40826040516104f291815260200190565b60405180910390a2919050565b5f546001600160a01b0316331461054a5760405162461bcd60e51b815260206004820152600f60248201526e6e6f7420706f6f6c20657363726f7760881b6044820152606401610314565b5f341161058e5760405162461bcd60e51b81526020600482015260126024820152710616d6f756e74206d757374206265203e20360741b6044820152606401610314565b61059781610604565b5f81815260016020526040812080543492906105b49084906106ed565b90915550505f818152600160209081526040918290205482513481529182015282917f1ca606821992e3b34613b5b29c0bbade3a907b2969d7f9f2927f726fa4baccfb910160405180910390a250565b5f8181526001602052604081209061061b83610210565b9050801561063b5780825f015f82825461063591906106ed565b90915550505b504260019091015550565b5f60208284031215610656575f5ffd5b5035919050565b5f6020828403121561066d575f5ffd5b81356001600160a01b0381168114610683575f5ffd5b9392505050565b634e487b7160e01b5f52601160045260245ffd5b818103818111156106b1576106b161068a565b92915050565b80820281158282048414176106b1576106b161068a565b5f826106e857634e487b7160e01b5f52601260045260245ffd5b500490565b808201808211156106b1576106b161068a56fea26469706673582212205456c811938ecf8c5f053494244bd8ce6098eab9af6e0b6c0684f1972245b5a164736f6c63430008240033"
+}

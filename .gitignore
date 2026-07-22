@@ -32,6 +32,22 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
+
+# claude code session state
+.claude/
+
+# Circle entity secret recovery files — never commit
+/recovery/
+recovery_file_*.dat
+
+# Hardhat build output (dev-only toolchain for yield vault time-travel tests)
+/artifacts/
+/cache/
+/typechain-types/
+
+# scratch/debug output
+output.txt
 
 # vercel
 .vercel

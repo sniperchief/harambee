@@ -1,26 +1,50 @@
 {
-  "name": "harambee-tmp",
+  "name": "harambee",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:db": "tsx scripts/test-db.ts",
+    "circle:register-entity-secret": "tsx scripts/register-entity-secret.ts",
+    "circle:create-wallet-set": "tsx scripts/create-wallet-set.ts",
+    "circle:create-test-wallets": "tsx scripts/create-test-wallets.ts",
+    "circle:fund-test-wallet": "tsx scripts/fund-test-wallet.ts",
+    "circle:list-wallets": "tsx scripts/list-wallets.ts",
+    "contracts:compile-pool-escrow": "tsx scripts/compile-contract.ts PoolEscrow",
+    "contracts:compile-yield-vault": "tsx scripts/compile-contract.ts YieldVault",
+    "contracts:deploy-pool-escrow": "tsx scripts/deploy-pool-escrow.ts",
+    "contracts:deploy-yield-vault": "tsx scripts/deploy-yield-vault.ts",
+    "contracts:wire-vault": "tsx scripts/wire-vault.ts",
+    "contracts:read-pool-escrow": "tsx scripts/read-pool-escrow.ts",
+    "contracts:read-yield-vault": "tsx scripts/read-yield-vault.ts",
+    "test:yield-vault": "hardhat test"
   },
   "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "^10.8.0",
+    "@circle-fin/modular-wallets-core": "^1.0.13",
+    "@circle-fin/smart-contract-platform": "^10.8.0",
+    "@supabase/supabase-js": "^2.110.3",
     "next": "16.2.10",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "viem": "^2.55.2"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "hardhat": "^2.29.0",
+    "solc": "^0.8.36",
     "tailwindcss": "^4",
+    "tsx": "^4.23.1",
     "typescript": "^5"
   }
 }
