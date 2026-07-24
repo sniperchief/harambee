@@ -46,7 +46,12 @@ export async function POST(request: NextRequest) {
     const deadlinePassed = Math.floor(Date.now() / 1000) >= Number(deadlineStr);
 
     if (thresholdMet || deadlinePassed) {
-      const result = await checkAndReleasePool(pool.id, pool.onchain_pool_id, walletId);
+      const result = await checkAndReleasePool(
+        pool.id,
+        pool.onchain_pool_id,
+        walletId,
+        pool.target_currency
+      );
       results.push({ poolId: pool.id, ...result });
     }
   }

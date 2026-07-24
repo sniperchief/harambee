@@ -1,11 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { loginPasskey } from "@/lib/modularWallet";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const next = useSearchParams().get("next") ?? "/account";
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -23,7 +24,7 @@ export default function LoginPage() {
         const body = await response.json();
         throw new Error(body.error ?? "Login failed");
       }
-      router.push("/account");
+      router.push(next);
     } catch (err) {
       setStatus("error");
       setErrorMessage(err instanceof Error ? err.message : "Login failed");
@@ -45,9 +46,17 @@ export default function LoginPage() {
       {status === "error" && (
         <p className="text-sm text-red-600">{errorMessage}</p>
       )}
-      <a href="/register" className="text-sm text-zinc-500 underline">
+      <a href={`/register?next=${encodeURIComponent(next)}`} className="text-sm text-zinc-500 underline">
         No passkey yet? Register
       </a>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

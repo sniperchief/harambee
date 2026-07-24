@@ -2,7 +2,7 @@
 
 Group-pooling payments app on Circle's Arc L1. Built in strict, small, confirmed-before-proceeding steps. This file is the handoff doc — if the chat/context resets, read this first, then the numbered steps in the original prompt, to know exactly where things stand.
 
-**Status: Steps 1–8 done and confirmed working. Step 9 (StableFX) is next.**
+**Status: Steps 1–9 done and confirmed working. Step 10 (wrap-up) is next.**
 
 ## Full test walkthrough (pool creation → contribute → release/refund)
 
@@ -125,9 +125,45 @@ One new gotcha hit mid-testing: after redeploying a *fresh* `YieldVault`, its re
 
 A dev-server crash also occurred mid-testing — this one in Next.js's Rust-based compiler (Turbopack/SWC: `Fatal process out of memory: Zone`), distinct from the earlier Node/V8 heap OOM crash from Step 4. Same cause (long-running dev session building up memory pressure on this machine) and same fix (`npm run dev` again).
 
-### Steps 9–10 — not started
-- **Step 9**: StableFX conversion at release time.
-- **Step 10**: wrap-up summary — what's real vs stubbed/faked for the demo. Belongs on this list: the yield vault's fixed/invented APY (not a real market rate, needs manual `fundReserve()` top-ups to actually pay out), the orphaned Step 7 test pool, and the lack of per-refund `pool_contributions` bookkeeping.
+### Step 9 — Local-currency display at release ✅
+
+**StableFX was investigated in depth and ruled out** — it's not a fiat-conversion API at all. Per Circle's own docs (`developers.circle.com/stablefx/*`):
+- It only swaps **USDC↔EURC** — no NGN/KES/GHS or any fiat currency appears anywhere in its supported-currencies list.
+- It's an **institutional RFQ trading venue**, not a quote lookup: requires KYB onboarding ("contact your Circle representative"), and every trade needs an **approved maker** (liquidity provider) to counter-sign via a `FxEscrow` contract (Permit2 + EIP-712), which a hackathon account has no access to.
+
+Also investigated as an alternative: Circle's **Digital Asset Accounts wire deposits/withdrawals** (a real fiat off-ramp) and third-party African off-ramp APIs (**Kotani Pay** — strongest fit, real sandbox, `/offramp/create` endpoint, mobile money + bank payout; also Yellow Card, Ivorypay, LocalRamp, Breet, Paychant). Both ruled out for the same underlying reason: Circle's wire product is **USD-only, US banking rails only**, gated behind a compliance-reviewed business account; and **no third-party off-ramp supports Arc** (public testnet only since Oct 2025, mainnet still rolling out in 2026) — they all integrate with established chains (Ethereum, Polygon, Celo, Tron, Solana, BSC). Bridging testnet funds off Arc wouldn't help either, since off-ramps pay real fiat for real USDC, not testnet tokens. **Conclusion: no path from Arc-testnet USDC to a real bank-account payout exists at our account tier, for any vendor** — a genuine platform-maturity limitation, not a shortcut.
+
+Given that, Step 9 is a **display-only stub**: at release time, if a pool has an optional `target_currency` set, its released USDC amount is converted to that currency using a live rate from a free public rate feed (`open.er-api.com`, no API key), and shown alongside the real on-chain `finalValue`. **This does not move any real fiat currency** — it's an informational number only, same demo pattern as the YieldVault standing in for Morpho.
+
+Implementation:
+- `supabase/migrations/0003_add_target_currency.sql` — adds `pools.target_currency` (nullable text), `pools.local_currency_amount`, `pools.fx_rate`. **Not yet applied — run this in Supabase SQL Editor before testing.**
+- `lib/localFx.ts` — `convertUsdcToLocal(amountUsdc, targetCurrency)`, fetches `open.er-api.com/v6/latest/USD`, treats 1 USDC = 1 USD (its actual peg).
+- `POST /api/pools` — accepts optional `targetCurrency` (e.g. `"NGN"`), stored on the pool row.
+- `lib/poolRelease.ts`'s `checkAndReleasePool` — takes optional 4th param `targetCurrency`; on a successful release (not refund — refund has no single recipient amount), computes and persists `local_currency_amount`/`fx_rate`, and includes `localCurrencyAmount`/`targetCurrency`/`fxRate` in the response. Conversion failure is caught and swallowed (logged, not thrown) — a rate-feed hiccup shouldn't undo an on-chain release that already succeeded.
+- Both callers (`check-release` and `cron/check-pools` routes) pass `pool.target_currency` through.
+
+Confirmed working: created a pool with `targetCurrency: "NGN"`, contributed to target, called `check-release` — response came back `{"status":"released","finalValue":"0.10000001870877727","txHash":"0x...","localCurrencyAmount":"136.83","targetCurrency":"NGN","fxRate":1368.257472}`. Live rate, correct math, alongside the real on-chain USDC settlement.
+
+### Web UI — create / share / contribute / auto-release ✅ (built, needs end-to-end browser test)
+
+Steps 1–9 were only ever exercised via curl. Since judges will test the product themselves in real time, this phase adds the actual pages: create a pool, get a shareable link, contribute with your own passkey wallet, and watch it auto-release.
+
+**Two architectural decisions:**
+- **Contribute (and refund) are passkey-signed from the browser** — a real ERC-4337 sponsored transaction via `viem`'s `account-abstraction` module + Circle's `toModularTransport` (which doubles as bundler *and* paymaster/Gas Station endpoint). No new npm packages were needed, but this is genuinely new/first-time-tested surface area: `lib/modularWallet.ts` previously only ever derived a wallet **address** for auth/display, never a signable account — `lib/poolContribute.ts` is new, keeps the `SmartAccount` object alive, and calls `createBundlerClient(...).sendUserOperation(...)`.
+- **Pool creation and release-checking stay server-side**, submitted through one dedicated "platform wallet" (`HARAMBEE_PLATFORM_WALLET_ID` env var, defaults to Wallet A) — reusing the exact path proven in Steps 6–9. Only `contribute()`/`refund()` go through the visitor's own wallet, since `msg.sender` there determines the on-chain bookkeeping; `createPool`/`checkAndRelease` don't care who submits them.
+
+**Live-demo prerequisite**: a freshly-registered passkey wallet has no testnet USDC — Arc's native currency *is* USDC, so `contribute()` sends real value, not just gas (Gas Station only sponsors gas). `/account` now shows a direct faucet link (`faucet-v2.circle.com`) next to the wallet address.
+
+**New/changed files:**
+- `lib/platformWallet.ts`, `lib/poolSync.ts` (shared "read on-chain state, sync Supabase, release if conditions met" logic, extracted since both the new sync route and contribute-confirm route need it), `lib/poolContribute.ts` (browser-only passkey signing).
+- `app/api/pools/route.ts` — **breaking change to the curl workflow**: `creatorId` now comes from the `harambee_session` cookie (not a client-supplied field — closes a real trust gap), and `walletId` is no longer a request field (uses the platform wallet instead). `recipientWalletAddress` is now optional (defaults to the creator's own wallet).
+- New `app/api/pools/[id]/sync/route.ts` (polled by the pool detail page) and `app/api/pools/[id]/contribute/confirm/route.ts` (called after a passkey-signed contribute succeeds on-chain, logs the real `contributor_id` — no longer always null like the curl-testing path).
+- New pages: `app/pools/new/page.tsx` (create form), `app/pools/[id]/page.tsx` + `components/PoolDetail.tsx` (share/contribute/status page, polls every 4s while open so deadline-based releases happen without a manual trigger even if no one contributes again). Extended `app/account/page.tsx` with a "My pools" list (created + contributed-to). Added `?next=` redirect support to `/register`/`/login` so contributing while logged out round-trips back to the pool page. `components/Button.tsx`/`TextInput.tsx` — small shared primitives (first ones in the previously-empty `components/` folder).
+
+**Not yet tested end-to-end in a real browser** — needs: register a fresh passkey, fund it via the faucet, create a pool, contribute from the pool page (passkey prompt), confirm it renders the release + local-currency amount, and separately confirm a short-deadline under-target pool refunds and can be claimed.
+
+### Step 10 — not started
+Wrap-up summary — what's real vs stubbed/faked for the demo. Belongs on this list: the yield vault's fixed/invented APY (not a real market rate, needs manual `fundReserve()` top-ups to actually pay out), the orphaned Step 7 test pool, the lack of per-refund `pool_contributions` bookkeeping, and Step 9's local-currency display being informational-only (no real off-ramp exists at our account tier — see Step 9 above for the full StableFX/off-ramp investigation).
 
 ## Env vars currently populated (see `.env.local.example` for the full list + where to get each)
 Done: Supabase (URL/anon/service-role), `CIRCLE_API_KEY`, `CIRCLE_ENTITY_SECRET`, `CIRCLE_WALLET_SET_ID`, `NEXT_PUBLIC_CIRCLE_CLIENT_KEY`, `NEXT_PUBLIC_CIRCLE_CLIENT_URL`, Arc RPC/chain-id/explorer, `POOL_ESCROW_CONTRACT_ADDRESS`, `YIELD_VAULT_CONTRACT_ADDRESS`.

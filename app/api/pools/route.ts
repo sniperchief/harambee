@@ -1,35 +1,54 @@
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { parseEther } from "viem";
 import { createCircleClient } from "@/lib/circle";
 import { createCircleContractsClient } from "@/lib/circleContracts";
+import { getPlatformWalletId } from "@/lib/platformWallet";
 import { getPoolEscrowAbiJson, getPoolEscrowAddress } from "@/lib/poolEscrow";
 import { createServiceClient } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {
+  const cookieStore = await cookies();
+  const creatorId = cookieStore.get("harambee_session")?.value;
+  if (!creatorId) {
+    return NextResponse.json({ error: "Not logged in" }, { status: 401 });
+  }
+
   const {
-    creatorId,
-    walletId,
     title,
     description,
     targetAmount,
     deadline,
     recipientWalletAddress,
     releaseMode,
+    targetCurrency,
   } = await request.json();
 
-  if (
-    !creatorId ||
-    !walletId ||
-    !title ||
-    !targetAmount ||
-    !deadline ||
-    !recipientWalletAddress
-  ) {
+  if (!title || !targetAmount || !deadline) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  const supabase = createServiceClient();
+  const { data: creator, error: creatorError } = await supabase
+    .from("users")
+    .select("modular_wallet_address")
+    .eq("id", creatorId)
+    .single();
+
+  if (creatorError || !creator) {
+    return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+  }
+
+  // A pool created "for yourself" (no explicit recipient) releases to the
+  // creator's own wallet.
+  const recipient = recipientWalletAddress || creator.modular_wallet_address;
+  if (!recipient) {
+    return NextResponse.json({ error: "recipientWalletAddress is required" }, { status: 400 });
   }
 
   const contractAddress = getPoolEscrowAddress();
   const abiJson = getPoolEscrowAbiJson();
+  const walletId = getPlatformWalletId();
 
   const deadlineUnix = Math.floor(new Date(deadline).getTime() / 1000);
   const targetAmountWei = parseEther(targetAmount).toString();
@@ -53,7 +72,7 @@ export async function POST(request: NextRequest) {
     walletId,
     contractAddress,
     abiFunctionSignature: "createPool(uint256,uint256,address)",
-    abiParameters: [targetAmountWei, String(deadlineUnix), recipientWalletAddress],
+    abiParameters: [targetAmountWei, String(deadlineUnix), recipient],
     fee: { type: "level", config: { feeLevel: "MEDIUM" } },
   });
 
@@ -70,7 +89,6 @@ export async function POST(request: NextRequest) {
     waitForState: "CONFIRMED",
   });
 
-  const supabase = createServiceClient();
   const { data: pool, error } = await supabase
     .from("pools")
     .insert({
@@ -81,8 +99,9 @@ export async function POST(request: NextRequest) {
       current_amount: 0,
       deadline: new Date(deadlineUnix * 1000).toISOString(),
       release_mode: releaseMode ?? undefined,
-      recipient_wallet_address: recipientWalletAddress,
+      recipient_wallet_address: recipient,
       onchain_pool_id: onchainPoolId,
+      target_currency: targetCurrency ?? null,
     })
     .select()
     .single();
