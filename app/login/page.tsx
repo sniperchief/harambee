@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { assertPasskey } from "@/lib/modularWallet";
+import { friendlyPasskeyError } from "@/lib/authErrors";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/Button";
 
@@ -24,12 +25,12 @@ function FingerprintIcon() {
 function LoginForm() {
   const router = useRouter();
   const next = useSearchParams().get("next") ?? "/dashboard";
-  const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "working">("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   async function handleLogin() {
     setStatus("working");
-    setErrorMessage("");
+    setErrorMsg(null);
     try {
       // 1. Get a fresh, single-use challenge from the server.
       const challengeRes = await fetch("/api/auth/challenge");
@@ -51,8 +52,10 @@ function LoginForm() {
       }
       router.push(next);
     } catch (err) {
-      setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Login failed");
+      const { cancelled, message } = friendlyPasskeyError(err);
+      setStatus("idle");
+      // Cancelling the passkey prompt is normal — show nothing, just reset.
+      if (!cancelled) setErrorMsg(message);
     }
   }
 
@@ -70,9 +73,9 @@ function LoginForm() {
         {status === "working" ? "Verifying…" : "Sign in with passkey"}
       </Button>
 
-      {status === "error" && (
+      {errorMsg && (
         <p className="mt-4 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger">
-          {errorMessage}
+          {errorMsg}
         </p>
       )}
 

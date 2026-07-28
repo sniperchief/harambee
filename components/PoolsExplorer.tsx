@@ -67,7 +67,7 @@ export function PoolsExplorer({ pools }: { pools: (PoolSummary & { role?: string
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search pools"
-            className="h-10 w-full rounded-[12px] border border-line bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 sm:w-64"
+            className="h-10 w-full rounded-[12px] border border-line bg-surface pl-9 pr-3 text-base text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 sm:w-64 sm:text-sm"
           />
         </div>
       </div>

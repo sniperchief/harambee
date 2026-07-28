@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { registerPasskey } from "@/lib/modularWallet";
+import { friendlyPasskeyError } from "@/lib/authErrors";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
@@ -26,15 +27,21 @@ function RegisterForm() {
   const router = useRouter();
   const next = useSearchParams().get("next") ?? "/dashboard";
   const [username, setUsername] = useState("");
-  const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "working">("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Circle's username rules: 5–50 chars, letters/numbers and _ @ . : + - only.
+  const trimmed = username.trim();
+  const usernameValid = /^[A-Za-z0-9_@.:+-]{5,50}$/.test(trimmed);
+  const showFormatError = username.length > 0 && !usernameValid;
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
+    if (!usernameValid) return;
     setStatus("working");
-    setErrorMessage("");
+    setErrorMsg(null);
     try {
-      const { credentialId, address, publicKey } = await registerPasskey(username);
+      const { credentialId, address, publicKey } = await registerPasskey(trimmed);
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,8 +53,10 @@ function RegisterForm() {
       }
       router.push(next);
     } catch (err) {
-      setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Registration failed");
+      const { cancelled, message } = friendlyPasskeyError(err);
+      setStatus("idle");
+      // Cancelling the passkey prompt is normal — show nothing, just reset.
+      if (!cancelled) setErrorMsg(message);
     }
   }
 
@@ -61,26 +70,33 @@ function RegisterForm() {
       </div>
 
       <form onSubmit={handleRegister} className="flex flex-col gap-5">
-        <Field label="What should we call you?" htmlFor="username" hint="Shown to people you pool with.">
+        <Field
+          label="Choose a username"
+          htmlFor="username"
+          hint="5–50 characters — letters, numbers, and _ @ . : + - (no spaces)."
+          error={showFormatError ? "Only letters, numbers and _ @ . : + - are allowed — 5 to 50 characters, no spaces." : undefined}
+        >
           <Input
             id="username"
             type="text"
-            placeholder="e.g. Amara O."
+            placeholder="e.g. amara_o"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoFocus
-            autoComplete="name"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
           />
         </Field>
 
-        <Button type="submit" size="lg" disabled={!username || status === "working"}>
+        <Button type="submit" size="lg" disabled={!usernameValid || status === "working"}>
           <FingerprintIcon />
           {status === "working" ? "Creating your passkey…" : "Continue with passkey"}
         </Button>
 
-        {status === "error" && (
+        {errorMsg && (
           <p className="rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger">
-            {errorMessage}
+            {errorMsg}
           </p>
         )}
       </form>

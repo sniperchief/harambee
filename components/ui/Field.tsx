@@ -1,7 +1,9 @@
 import { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, forwardRef } from "react";
 
+// text-base (16px) is deliberate: iOS Safari auto-zooms into any input with a
+// font smaller than 16px. Keeping controls at 16px prevents that zoom.
 const CONTROL =
-  "w-full rounded-[12px] border border-line bg-surface px-3.5 text-[15px] text-ink " +
+  "w-full rounded-[12px] border border-line bg-surface px-3.5 text-base text-ink " +
   "placeholder:text-muted/70 transition-colors duration-150 " +
   "hover:border-line-strong focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 " +
   "disabled:opacity-60";
