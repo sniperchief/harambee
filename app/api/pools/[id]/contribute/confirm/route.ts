@@ -47,6 +47,24 @@ export async function POST(
     return NextResponse.json({ error: contributionError.message }, { status: 500 });
   }
 
-  const result = await syncPoolFromChain(poolId, pool.onchain_pool_id, pool.target_currency);
-  return NextResponse.json(result);
+  // The contribution is already on-chain and recorded. Re-syncing the pool's
+  // aggregate state (and possibly triggering release) is best-effort: a
+  // transient chain/RPC hiccup here must not surface as a failure for a
+  // contribution that already succeeded. Fall back to current DB state so the
+  // client always receives valid JSON.
+  try {
+    const result = await syncPoolFromChain(poolId, pool.onchain_pool_id, pool.target_currency);
+    return NextResponse.json(result);
+  } catch (err) {
+    console.error("Post-contribution sync failed (contribution already recorded):", err);
+    const { data: fresh } = await supabase
+      .from("pools")
+      .select("current_amount, status")
+      .eq("id", poolId)
+      .single();
+    return NextResponse.json({
+      currentAmount: fresh?.current_amount ?? pool.current_amount,
+      status: fresh?.status ?? pool.status,
+    });
+  }
 }

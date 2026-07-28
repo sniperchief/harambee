@@ -11,6 +11,7 @@ import {
   toPasskeyTransport,
   toWebAuthnCredential,
   toCircleSmartAccount,
+  getUserOperationGasPrice,
   WebAuthnMode,
 } from "@circle-fin/modular-wallets-core";
 
@@ -61,6 +62,21 @@ async function getBundlerClient() {
     chain: arcTestnet,
     transport: modularTransport,
     paymaster: true,
+    // viem's default fee estimate underprices maxPriorityFeePerGas on Arc,
+    // tripping the bundler precheck ("maxPriorityFeePerGas ... must be at
+    // least ..."). Use Circle's own gas-price oracle so the fees always
+    // satisfy the bundler, with a 1 gwei floor as belt-and-suspenders.
+    userOperation: {
+      estimateFeesPerGas: async () => {
+        const { medium } = await getUserOperationGasPrice(publicClient);
+        const floor = 1_000_000_000n; // 1 gwei
+        let maxPriorityFeePerGas = BigInt(medium.maxPriorityFeePerGas);
+        if (maxPriorityFeePerGas < floor) maxPriorityFeePerGas = floor;
+        let maxFeePerGas = BigInt(medium.maxFeePerGas);
+        if (maxFeePerGas < maxPriorityFeePerGas) maxFeePerGas = maxPriorityFeePerGas;
+        return { maxFeePerGas, maxPriorityFeePerGas };
+      },
+    },
   });
 
   return { bundlerClient, account };

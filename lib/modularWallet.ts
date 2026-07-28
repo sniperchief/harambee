@@ -1,6 +1,7 @@
 import { createPublicClient } from "viem";
 import { arcTestnet } from "viem/chains";
 import { toWebAuthnAccount } from "viem/account-abstraction";
+import { sign, type WebAuthnData } from "webauthn-p256";
 import {
   toModularTransport,
   toPasskeyTransport,
@@ -43,7 +44,37 @@ export async function registerPasskey(username: string) {
     mode: WebAuthnMode.Register,
     username,
   });
-  return credentialToAddress(credential, publicClient);
+  const { address, credentialId } = await credentialToAddress(credential, publicClient);
+  // publicKey is captured so the server can verify future login signatures
+  // against it — see lib/authChallenge.ts and /api/auth/login.
+  return { address, credentialId, publicKey: credential.publicKey };
+}
+
+export type PasskeyAssertion = {
+  credentialId: string;
+  signature: `0x${string}`;
+  webauthn: WebAuthnData;
+};
+
+// Discoverable login: prompt the user to pick a passkey and sign the server's
+// challenge in a single ceremony (one biometric prompt). The credential id is
+// captured from the WebAuthn response so the server knows which account signed.
+export async function assertPasskey(challenge: `0x${string}`): Promise<PasskeyAssertion> {
+  let credentialId: string | null = null;
+  const getFn = async (options?: CredentialRequestOptions) => {
+    const cred = await window.navigator.credentials.get(options);
+    if (cred) credentialId = cred.id;
+    return cred;
+  };
+
+  const { signature, webauthn } = await sign({
+    hash: challenge,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getFn: getFn as any,
+  });
+
+  if (!credentialId) throw new Error("No passkey was selected");
+  return { credentialId, signature, webauthn };
 }
 
 export async function loginPasskey() {
