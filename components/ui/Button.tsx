@@ -7,7 +7,7 @@ type Size = "sm" | "md" | "lg";
 const BASE =
   "inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap select-none " +
   "rounded-none transition-all duration-150 ease-out " +
-  "active:translate-y-px disabled:pointer-events-none disabled:opacity-50";
+  "active:translate-y-px active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
 
 const VARIANTS: Record<Variant, string> = {
   primary:

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { shortAddress } from "@/lib/format";
+import { shortAddress, formatUsdc } from "@/lib/format";
+import { useWalletBalance } from "@/lib/useWalletBalance";
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
@@ -18,8 +19,24 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
 
 export function WalletCard({ address }: { address: string | null }) {
   const [copied, setCopied] = useState(false);
+  const { balance, loading } = useWalletBalance();
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-5">
+      <div>
+        <p className="text-sm font-medium text-muted">Available balance</p>
+        <div className="mt-1 h-8">
+          {loading ? (
+            <span className="inline-block h-7 w-28 animate-pulse rounded-md bg-surface-2" />
+          ) : (
+            <p className="text-2xl font-bold leading-none tracking-tight text-navy tnum">
+              {balance !== null ? `$${formatUsdc(balance)}` : "—"}
+            </p>
+          )}
+        </div>
+        <p className="mt-1.5 text-xs text-muted">Testnet USDC</p>
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="text-sm font-medium text-ink">Smart wallet address</p>
         <p className="mt-0.5 truncate text-sm text-muted tnum">{address ?? "—"}</p>
@@ -46,6 +63,7 @@ export function WalletCard({ address }: { address: string | null }) {
         >
           Add test funds
         </a>
+      </div>
       </div>
     </div>
   );

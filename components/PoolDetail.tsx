@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Progress } from "@/components/ui/Progress";
@@ -10,6 +10,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { AmountInput } from "@/components/ui/Field";
 import { CountUp } from "@/components/ui/CountUp";
 import { contributeWithPasskey, refundWithPasskey } from "@/lib/poolContribute";
+import { useWalletBalance } from "@/lib/useWalletBalance";
+import { friendlyPasskeyError } from "@/lib/authErrors";
 import {
   formatUsdc,
   formatLocal,
@@ -99,6 +101,24 @@ export function PoolDetail({
   const [errorMessage, setErrorMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [yieldEarned, setYieldEarned] = useState<string | null>(null);
+  const { balance, refresh: refreshBalance } = useWalletBalance();
+
+  const refreshYield = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/pools/${pool.id}/yield`);
+      if (r.ok) {
+        const body = await r.json();
+        setYieldEarned(body.yield ?? null);
+      }
+    } catch {
+      // leave as-is
+    }
+  }, [pool.id]);
+
+  useEffect(() => {
+    refreshYield();
+  }, [refreshYield]);
 
   // Tick once a second so expiry and the countdown update live — this is what
   // flips the contribute box to "Pool ended" the instant the clock runs out,
@@ -148,13 +168,21 @@ export function PoolDetail({
       if (body) setState((prev) => ({ ...prev, ...body }));
       setAmount("");
       setContributeStatus("idle");
+      refreshBalance();
+      refreshYield();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Contribution failed";
       const closed = /not open|deadline|closed/i.test(msg);
-      setContributeStatus("error");
-      setErrorMessage(
-        closed ? "This pool just closed — contributions are no longer accepted." : msg
-      );
+      const { cancelled, message } = friendlyPasskeyError(err);
+      if (cancelled) {
+        // Cancelling the passkey prompt is normal — no error.
+        setContributeStatus("idle");
+      } else {
+        setContributeStatus("error");
+        setErrorMessage(
+          closed ? "This pool just closed — contributions are no longer accepted." : message
+        );
+      }
       if (closed) {
         // Flip the UI to the pool's real state.
         fetch(`/api/pools/${pool.id}/sync`, { method: "POST" })
@@ -207,6 +235,13 @@ export function PoolDetail({
   const showLiveOpen = canContribute; // drives the "Open" badge + yield line
   const badgeLabel = endedByDeadline ? "Ended" : status.label;
   const badgeTone = endedByDeadline ? "muted" : status.tone;
+  const insufficient = balance !== null && !!amount && Number(amount) > Number(balance);
+  const yieldNum = yieldEarned !== null ? Number(yieldEarned) : 0;
+  const showYieldAmt = yieldNum >= 0.00005;
+  const releasedYield =
+    state.status === "released" && state.finalValue
+      ? Math.max(0, Number(state.finalValue) - Number(state.currentAmount))
+      : 0;
 
   return (
     <div>
@@ -217,7 +252,10 @@ export function PoolDetail({
             <Badge tone={badgeTone} dot={showLiveOpen}>{badgeLabel}</Badge>
             {showLiveOpen && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
-                <LeafIcon /> Earning yield in escrow
+                <LeafIcon />
+                {showYieldAmt
+                  ? `Earning yield · +$${formatUsdc(yieldEarned!, { decimals: 4 })}`
+                  : "Earning yield in escrow"}
               </span>
             )}
           </div>
@@ -272,6 +310,11 @@ export function PoolDetail({
                     ${formatUsdc(state.finalValue ?? state.currentAmount)} USDC
                     {state.localCurrencyAmount ? ` · ≈ ${formatLocal(state.localCurrencyAmount, state.targetCurrency)} (rate ${state.fxRate}, informational)` : ""}
                   </p>
+                  {releasedYield > 0 && (
+                    <p className="mt-0.5 text-xs font-medium text-success tnum">
+                      includes +${formatUsdc(releasedYield, { decimals: 4 })} yield earned
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -354,12 +397,29 @@ export function PoolDetail({
                           </button>
                         ))}
                       </div>
-                      <Button onClick={handleContribute} size="lg" disabled={!amount || Number(amount) <= 0 || contributeStatus === "working"}>
-                        {contributeStatus === "working" ? "Confirming…" : "Contribute with passkey"}
-                      </Button>
-                      {viewerWalletAddress && (
-                        <p className="text-center text-xs text-muted tnum">
-                          Signing as {shortAddress(viewerWalletAddress)}
+                      {insufficient ? (
+                        <a
+                          href="https://faucet.circle.com/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex h-13 min-h-[52px] w-full items-center justify-center rounded-none bg-brand-strong px-5 text-[15px] font-semibold text-white shadow-md transition-all hover:-translate-y-px hover:brightness-95 hover:shadow-lg"
+                        >
+                          Add funds
+                        </a>
+                      ) : (
+                        <Button onClick={handleContribute} size="lg" disabled={!amount || Number(amount) <= 0 || contributeStatus === "working"}>
+                          {contributeStatus === "working" ? "Confirming…" : "Contribute with passkey"}
+                        </Button>
+                      )}
+                      <div className="flex items-center justify-between text-xs text-muted">
+                        <span className="tnum">
+                          Balance: {balance !== null ? `$${formatUsdc(balance)}` : "—"}
+                        </span>
+                        {viewerWalletAddress && <span className="tnum">{shortAddress(viewerWalletAddress)}</span>}
+                      </div>
+                      {insufficient && (
+                        <p className="text-xs text-warning">
+                          That&apos;s more than your balance — add funds to contribute this amount.
                         </p>
                       )}
                     </div>

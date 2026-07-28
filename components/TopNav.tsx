@@ -22,7 +22,7 @@ export function TopNav({ walletAddress, name }: { walletAddress: string | null; 
     <header className="sticky top-0 z-40 bg-white">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-8">
-          <Logo href="/dashboard" size={30} />
+          <Logo href="/" size={30} />
           <nav className="hidden items-center gap-1 md:flex">
             {NAV.map((item) => (
               <Link
