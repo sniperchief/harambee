@@ -5,9 +5,9 @@ import { PoolCard, type PoolSummary } from "@/components/PoolCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ButtonLink } from "@/components/ui/Button";
 
-type Tab = "all" | "open" | "released" | "refunded";
+type StatusTab = "all" | "open" | "released" | "refunded";
 
-const TABS: { key: Tab; label: string }[] = [
+const STATUS_TABS: { key: StatusTab; label: string }[] = [
   { key: "all", label: "All" },
   { key: "open", label: "Open" },
   { key: "released", label: "Released" },
@@ -21,41 +21,73 @@ const TAB_DOT: Record<string, string> = {
   refunded: "bg-[#2a303c]",
 };
 
-export function PoolsExplorer({ pools }: { pools: (PoolSummary & { role?: string })[] }) {
-  const [tab, setTab] = useState<Tab>("all");
+export function PoolsExplorer({
+  created,
+  contributed,
+}: {
+  created: PoolSummary[];
+  contributed: PoolSummary[];
+}) {
+  const hasContributed = contributed.length > 0;
+  const [source, setSource] = useState<"created" | "contributed">("created");
+  const [status, setStatus] = useState<StatusTab>("all");
   const [query, setQuery] = useState("");
 
+  const activeList = source === "contributed" && hasContributed ? contributed : created;
+
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: pools.length, open: 0, released: 0, refunded: 0 };
-    for (const p of pools) c[p.status] = (c[p.status] ?? 0) + 1;
+    const c: Record<string, number> = { all: activeList.length, open: 0, released: 0, refunded: 0 };
+    for (const p of activeList) c[p.status] = (c[p.status] ?? 0) + 1;
     return c;
-  }, [pools]);
+  }, [activeList]);
 
   const filtered = useMemo(() => {
-    return pools.filter((p) => {
-      if (tab !== "all" && p.status !== tab) return false;
+    return activeList.filter((p) => {
+      if (status !== "all" && p.status !== status) return false;
       if (query && !p.title.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
-  }, [pools, tab, query]);
+  }, [activeList, status, query]);
 
   return (
     <div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-1 rounded-[12px] border border-line bg-surface p-1">
-          {TABS.map((t) => (
+      {/* Created / Contributed — only offer the split once they've contributed. */}
+      {hasContributed && (
+        <div className="mb-5 flex w-fit gap-1 rounded-[12px] border border-line bg-surface p-1">
+          {(["created", "contributed"] as const).map((s) => (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`inline-flex items-center gap-1.5 rounded-[9px] px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                tab === t.key ? "bg-brand text-navy" : "text-muted hover:text-ink"
+              key={s}
+              onClick={() => {
+                setSource(s);
+                setStatus("all");
+                setQuery("");
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-[9px] px-4 py-1.5 text-sm font-semibold transition-colors ${
+                source === s ? "bg-navy text-white" : "text-muted hover:text-ink"
               }`}
             >
-              {t.key !== "all" && (
-                <span className={`h-2 w-2 rounded-full ${TAB_DOT[t.key]}`} />
-              )}
+              {s === "created" ? "Created" : "Contributed"}
+              <span className={`tnum text-xs ${source === s ? "text-white/60" : "text-muted/70"}`}>
+                {s === "created" ? created.length : contributed.length}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-1 rounded-[12px] border border-line bg-surface p-1">
+          {STATUS_TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setStatus(t.key)}
+              className={`inline-flex items-center gap-1.5 rounded-[9px] px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                status === t.key ? "bg-brand text-navy" : "text-muted hover:text-ink"
+              }`}
+            >
+              {t.key !== "all" && <span className={`h-2 w-2 rounded-full ${TAB_DOT[t.key]}`} />}
               {t.label}
-              <span className={`tnum text-xs ${tab === t.key ? "text-navy/60" : "text-muted/70"}`}>
+              <span className={`tnum text-xs ${status === t.key ? "text-navy/60" : "text-muted/70"}`}>
                 {counts[t.key] ?? 0}
               </span>
             </button>
@@ -75,9 +107,21 @@ export function PoolsExplorer({ pools }: { pools: (PoolSummary & { role?: string
       <div className="mt-6">
         {filtered.length === 0 ? (
           <EmptyState
-            title={query ? "No pools match your search" : "Nothing here yet"}
-            description={query ? "Try a different name." : "Pools you create or contribute to will show up here."}
-            action={<ButtonLink href="/pools/new">Create a pool</ButtonLink>}
+            title={
+              query
+                ? "No pools match your search"
+                : source === "contributed"
+                  ? "No contributions here"
+                  : "You haven't created any pools yet"
+            }
+            description={
+              query
+                ? "Try a different name."
+                : source === "contributed"
+                  ? "Pools you contribute to will show up here."
+                  : "Create your first pool — it takes about a minute."
+            }
+            action={source === "created" ? <ButtonLink href="/pools/new">Create a pool</ButtonLink> : undefined}
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

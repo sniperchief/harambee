@@ -26,17 +26,22 @@ export default async function PoolsPage() {
   const { data: contribRows } = (await supabase
     .from("pool_contributions")
     .select("pools(*)")
-    .eq("contributor_id", user.id)) as unknown as { data: { pools: PoolSummary | null }[] | null };
+    .eq("contributor_id", user.id)
+    .eq("status", "confirmed")) as unknown as { data: { pools: PoolSummary | null }[] | null };
 
-  const byId = new Map<string, PoolSummary>();
-  for (const p of (createdRaw ?? []) as PoolSummary[]) byId.set(p.id, p);
+  const createdPools = (createdRaw ?? []) as PoolSummary[];
+
+  // A pool the user contributed to (deduped — they may have contributed twice).
+  const contributedById = new Map<string, PoolSummary>();
   for (const row of contribRows ?? []) {
-    if (row.pools && !byId.has(row.pools.id)) byId.set(row.pools.id, row.pools);
+    if (row.pools) contributedById.set(row.pools.id, row.pools);
   }
+  const contributedPools = Array.from(contributedById.values());
 
-  const pools = Array.from(byId.values());
-  const counts = await getContributorCounts(supabase, pools.map((p) => p.id));
-  const withCounts = pools.map((p) => ({ ...p, contributor_count: counts[p.id] ?? 0 }));
+  const allIds = Array.from(new Set([...createdPools, ...contributedPools].map((p) => p.id)));
+  const counts = await getContributorCounts(supabase, allIds);
+  const withCounts = (list: PoolSummary[]) =>
+    list.map((p) => ({ ...p, contributor_count: counts[p.id] ?? 0 }));
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -52,7 +57,7 @@ export default async function PoolsPage() {
           </ButtonLink>
         </div>
         <div className="mt-8">
-          <PoolsExplorer pools={withCounts} />
+          <PoolsExplorer created={withCounts(createdPools)} contributed={withCounts(contributedPools)} />
         </div>
       </main>
     </div>

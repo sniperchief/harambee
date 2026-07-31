@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PoolDetail, type Contribution } from "@/components/PoolDetail";
 import { Logo } from "@/components/Logo";
 import { getPoolEscrowAddress } from "@/lib/poolEscrow";
+import { getOnchainContribution } from "@/lib/onchainContribution";
 import { createServiceClient } from "@/lib/supabase";
 
 export default async function PoolPage({ params }: { params: Promise<{ id: string }> }) {
@@ -57,6 +58,19 @@ export default async function PoolPage({ params }: { params: Promise<{ id: strin
     contributions.map((c) => c.contributor ?? c.id)
   ).size;
 
+  // Refund gating: only people who actually contributed see the claim button,
+  // and it's disabled once they've claimed (on-chain balance zeroed). Only
+  // relevant for refunded pools.
+  let viewerContributed = false;
+  let viewerClaimed = false;
+  if (viewerWalletAddress && pool.status === "refunded") {
+    viewerContributed = contributions.some((c) => c.contributor === viewerWalletAddress);
+    if (viewerContributed) {
+      const remaining = await getOnchainContribution(pool.onchain_pool_id, viewerWalletAddress);
+      viewerClaimed = remaining !== null && remaining === 0n;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-canvas">
       <header className="sticky top-0 z-40 border-b border-line bg-surface/80 backdrop-blur-md">
@@ -78,6 +92,8 @@ export default async function PoolPage({ params }: { params: Promise<{ id: strin
           viewerWalletAddress={viewerWalletAddress}
           contributions={contributions}
           contributorCount={contributorCount}
+          viewerContributed={viewerContributed}
+          viewerClaimed={viewerClaimed}
         />
       </main>
     </div>

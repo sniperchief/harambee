@@ -80,6 +80,8 @@ export function PoolDetail({
   viewerWalletAddress,
   contributions,
   contributorCount,
+  viewerContributed,
+  viewerClaimed,
 }: {
   pool: Pool;
   poolEscrowAddress: `0x${string}`;
@@ -87,6 +89,8 @@ export function PoolDetail({
   viewerWalletAddress: string | null;
   contributions: Contribution[];
   contributorCount: number;
+  viewerContributed: boolean;
+  viewerClaimed: boolean;
 }) {
   const [state, setState] = useState<PoolState>({
     currentAmount: pool.current_amount,
@@ -242,6 +246,7 @@ export function PoolDetail({
     state.status === "released" && state.finalValue
       ? Math.max(0, Number(state.finalValue) - Number(state.currentAmount))
       : 0;
+  const refundClaimed = viewerClaimed || refundStatus === "done";
 
   return (
     <div>
@@ -262,16 +267,11 @@ export function PoolDetail({
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-navy sm:text-[34px]">{pool.title}</h1>
           {pool.description && <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-muted">{pool.description}</p>}
         </div>
-        <Button variant="secondary" size="sm" onClick={copyLink} className="shrink-0">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4M12 2v14"/></svg>
-          {copied ? "Link copied" : "Share"}
-        </Button>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
-        {/* Main column */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Progress hero */}
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Progress hero — first on mobile, top-left on desktop */}
+        <div className="order-1 lg:order-none lg:col-span-2 lg:col-start-1 lg:row-start-1">
           <Card className="p-6 sm:p-7">
             <div className="flex items-end justify-between gap-4">
               <div>
@@ -290,13 +290,29 @@ export function PoolDetail({
             </div>
             <Progress value={pct} tone={state.status === "released" ? "success" : "brand"} size="lg" className="mt-5" />
 
-            <div className="mt-6 grid grid-cols-3 divide-x divide-line rounded-[14px] border border-line bg-surface-2/60">
-              <Stat label="Contributors" value={String(contributorCount)} />
-              <Stat label={showLiveOpen ? "Time left" : "Status"} value={showLiveOpen ? time.label : endedByDeadline ? "Ended" : status.label} tone={showLiveOpen && time.urgent ? "warn" : undefined} />
-              <Stat label="Target" value={pool.target_currency ? formatLocal(target, pool.target_currency) : `$${formatUsdc(target, { decimals: 0 })}`} />
+            <div className="mt-6 grid grid-cols-3 gap-2">
+              <div className="rounded-[12px] bg-navy px-2 py-3.5 text-center">
+                <p className="text-xs font-medium text-white/60">Contributors</p>
+                <p className="mt-1 text-sm font-semibold text-white tnum">{contributorCount}</p>
+              </div>
+              <div className="rounded-[12px] border border-line bg-surface px-2 py-3.5 text-center">
+                <p className="text-xs font-medium text-muted">Release</p>
+                <p className={`mt-1 text-sm font-semibold tnum ${showLiveOpen && time.urgent ? "text-warning" : "text-ink"}`}>
+                  {showLiveOpen ? time.label : endedByDeadline ? "Ended" : status.label}
+                </p>
+              </div>
+              <div className="rounded-[12px] bg-brand-strong px-2 py-3.5 text-center">
+                <p className="text-xs font-medium text-white/70">Target</p>
+                <p className="mt-1 text-sm font-semibold text-white tnum">
+                  {pool.target_currency ? formatLocal(target, pool.target_currency) : `$${formatUsdc(target, { decimals: 0 })}`}
+                </p>
+              </div>
             </div>
           </Card>
+        </div>
 
+        {/* Released summary + funding history — below progress on desktop */}
+        <div className="order-3 lg:order-none space-y-6 lg:col-span-2 lg:col-start-1 lg:row-start-2">
           {/* Released summary */}
           {state.status === "released" && (
             <Card className="border-success/30 bg-success-50/40 p-6">
@@ -345,31 +361,10 @@ export function PoolDetail({
               </ul>
             )}
           </Card>
-
-          {/* Pool rules */}
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold text-ink">How this pool works</h2>
-            <ul className="mt-4 space-y-3">
-              {[
-                ["Held in escrow", "Every contribution sits in an audited smart contract — no single person can withdraw early."],
-                ["Earning while it waits", "Idle funds are placed in a low-risk yield vault, and any yield is added to the pool."],
-                ["Automatic release", "The moment the goal or deadline condition is met, funds move to the recipient."],
-                ["Refundable", "If the goal isn't reached in time, every contributor can claim a full refund."],
-              ].map(([h, b]) => (
-                <li key={h} className="flex gap-3">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
-                  <span>
-                    <span className="text-sm font-semibold text-ink">{h}. </span>
-                    <span className="text-sm text-muted">{b}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Card>
         </div>
 
-        {/* Sticky action column */}
-        <div className="lg:col-span-1">
+        {/* Action card — under "Raised so far" on mobile; sticky right column on desktop */}
+        <div className="order-2 lg:order-none lg:col-span-1 lg:col-start-3 lg:row-start-1 lg:row-span-2">
           <div className="lg:sticky lg:top-24">
             <Card className="p-6 shadow-sm">
               {canContribute && (
@@ -455,21 +450,39 @@ export function PoolDetail({
                 </div>
               )}
 
-              {state.status === "refunded" && (
-                <>
-                  <h2 className="text-lg font-semibold text-ink">Claim your refund</h2>
-                  <p className="mt-1 text-sm text-muted">This pool didn&apos;t reach its goal in time. Your contribution is available to withdraw.</p>
-                  {isLoggedIn ? (
-                    <Button onClick={handleRefund} size="lg" className="mt-5 w-full" disabled={refundStatus === "working" || refundStatus === "done"}>
-                      {refundStatus === "done" ? "Refund claimed" : refundStatus === "working" ? "Claiming…" : "Claim refund"}
-                    </Button>
-                  ) : (
-                    <Link href={`/login?next=/pools/${pool.id}`} className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-none bg-navy px-5 text-[15px] font-semibold text-white shadow-md hover:shadow-lg">
-                      Sign in to claim
-                    </Link>
-                  )}
-                </>
-              )}
+              {state.status === "refunded" &&
+                (viewerContributed ? (
+                  <>
+                    <h2 className="text-lg font-semibold text-ink">Claim your refund</h2>
+                    <p className="mt-1 text-sm text-muted">
+                      This pool didn&apos;t reach its goal in time. Your contribution is available to withdraw.
+                    </p>
+                    {isLoggedIn ? (
+                      <Button
+                        onClick={handleRefund}
+                        size="lg"
+                        className="mt-5 w-full"
+                        disabled={refundClaimed || refundStatus === "working"}
+                      >
+                        {refundClaimed ? "Refund claimed" : refundStatus === "working" ? "Claiming…" : "Claim refund"}
+                      </Button>
+                    ) : (
+                      <Link href={`/login?next=/pools/${pool.id}`} className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-none bg-navy px-5 text-[15px] font-semibold text-white shadow-md hover:shadow-lg">
+                        Sign in to claim
+                      </Link>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center">
+                    <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    </span>
+                    <p className="mt-3 font-semibold text-ink">Pool refunded</p>
+                    <p className="mt-1 text-sm text-muted">
+                      This pool didn&apos;t reach its goal, so contributions were returned to everyone who gave.
+                    </p>
+                  </div>
+                ))}
 
               {state.status === "released" && (
                 <div className="text-center">
@@ -492,7 +505,12 @@ export function PoolDetail({
                 <p className="mt-4 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger">{errorMessage}</p>
               )}
 
-              <div className="mt-6 flex items-center justify-center gap-2 border-t border-line pt-4 text-xs text-muted">
+              <Button variant="secondary" onClick={copyLink} className="mt-4 w-full">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4M12 2v14"/></svg>
+                {copied ? "Link copied" : "Share pool"}
+              </Button>
+
+              <div className="mt-4 flex items-center justify-center gap-2 border-t border-line pt-4 text-xs text-muted">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
                 Funds secured in on-chain escrow
               </div>
@@ -504,11 +522,3 @@ export function PoolDetail({
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "warn" }) {
-  return (
-    <div className="px-3 py-3.5 text-center first:pl-4 last:pr-4">
-      <p className="text-xs font-medium text-muted">{label}</p>
-      <p className={`mt-1 text-sm font-semibold tnum ${tone === "warn" ? "text-warning" : "text-ink"}`}>{value}</p>
-    </div>
-  );
-}
