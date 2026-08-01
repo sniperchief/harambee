@@ -28,7 +28,7 @@ export async function syncPoolFromChain(
     abiFunctionSignature: "getPool(uint256)",
     abiParameters: [onchainPoolId],
   });
-  const [, targetAmountWei, currentAmountWei, deadlineStr, statusIndex, finalValueWei] =
+  const [, targetAmountWei, currentAmountWei, deadlineStr, statusIndex, finalValueWei, releaseModeStr] =
     stateResponse.data?.outputValues ?? [];
 
   const currentAmount = formatEther(BigInt(currentAmountWei));
@@ -36,7 +36,13 @@ export async function syncPoolFromChain(
   const thresholdMet = BigInt(currentAmountWei) >= BigInt(targetAmountWei);
   const deadlinePassed = Math.floor(Date.now() / 1000) >= Number(deadlineStr);
 
-  if (status === "open" && (thresholdMet || deadlinePassed)) {
+  // deadline_only (mode 2) never releases early — firing checkAndRelease on a
+  // met target before the deadline would just revert. Every other mode may
+  // release the moment the target is hit.
+  const deadlineOnly = Number(releaseModeStr) === 2;
+  const shouldTrigger = deadlineOnly ? deadlinePassed : thresholdMet || deadlinePassed;
+
+  if (status === "open" && shouldTrigger) {
     const result = await checkAndReleasePool(
       poolId,
       onchainPoolId,

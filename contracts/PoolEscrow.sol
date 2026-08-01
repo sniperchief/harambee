@@ -22,6 +22,14 @@ contract PoolEscrow {
         Refunded
     }
 
+    // How a pool resolves when checkAndRelease runs. Ordering matches the
+    // release_mode strings used off-chain (0 = threshold_or_deadline, etc.).
+    enum ReleaseMode {
+        ThresholdOrDeadline, // release when target hit, else release whatever's raised at deadline
+        ThresholdOnly,       // release when target hit, else refund contributors at deadline
+        DeadlineOnly         // never release early; release whatever's raised at deadline
+    }
+
     struct Pool {
         address recipient;
         uint256 targetAmount;
@@ -29,6 +37,7 @@ contract PoolEscrow {
         uint256 deadline;
         Status status;
         uint256 finalValue; // principal + yield withdrawn from the vault, set once released/refunded
+        ReleaseMode releaseMode;
     }
 
     address public immutable vault;
@@ -47,7 +56,7 @@ contract PoolEscrow {
         vault = _vault;
     }
 
-    function createPool(uint256 targetAmount, uint256 deadline, address recipient) external returns (uint256 poolId) {
+    function createPool(uint256 targetAmount, uint256 deadline, address recipient, ReleaseMode releaseMode) external returns (uint256 poolId) {
         require(targetAmount > 0, "target must be > 0");
         require(deadline > block.timestamp, "deadline must be future");
         require(recipient != address(0), "recipient required");
@@ -59,7 +68,8 @@ contract PoolEscrow {
             currentAmount: 0,
             deadline: deadline,
             status: Status.Open,
-            finalValue: 0
+            finalValue: 0,
+            releaseMode: releaseMode
         });
 
         emit PoolCreated(poolId, recipient, targetAmount, deadline);
@@ -89,12 +99,30 @@ contract PoolEscrow {
 
         bool thresholdMet = pool.currentAmount >= pool.targetAmount;
         bool deadlinePassed = block.timestamp >= pool.deadline;
-        require(thresholdMet || deadlinePassed, "conditions not met");
+
+        // Resolve the outcome per the pool's release mode.
+        bool doRelease;
+        if (pool.releaseMode == ReleaseMode.DeadlineOnly) {
+            // No early release — only at/after the deadline, and it releases
+            // whatever was raised whether or not the target was met.
+            require(deadlinePassed, "before deadline");
+            doRelease = true;
+        } else if (pool.releaseMode == ReleaseMode.ThresholdOrDeadline) {
+            // Release early once the target is hit, otherwise release whatever
+            // was raised at the deadline.
+            require(thresholdMet || deadlinePassed, "conditions not met");
+            doRelease = true;
+        } else {
+            // ThresholdOnly: release early once the target is hit; if the
+            // deadline passes first without hitting it, refund contributors.
+            require(thresholdMet || deadlinePassed, "conditions not met");
+            doRelease = thresholdMet;
+        }
 
         uint256 totalValue = IYieldVault(vault).withdrawAll(poolId);
         pool.finalValue = totalValue;
 
-        if (thresholdMet) {
+        if (doRelease) {
             pool.status = Status.Released;
             (bool success, ) = pool.recipient.call{value: totalValue}("");
             require(success, "transfer failed");
@@ -136,9 +164,10 @@ contract PoolEscrow {
         uint256 currentAmount,
         uint256 deadline,
         Status status,
-        uint256 finalValue
+        uint256 finalValue,
+        ReleaseMode releaseMode
     ) {
         Pool storage pool = pools[poolId];
-        return (pool.recipient, pool.targetAmount, pool.currentAmount, pool.deadline, pool.status, pool.finalValue);
+        return (pool.recipient, pool.targetAmount, pool.currentAmount, pool.deadline, pool.status, pool.finalValue, pool.releaseMode);
     }
 }

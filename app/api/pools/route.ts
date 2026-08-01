@@ -7,6 +7,13 @@ import { getPlatformWalletId } from "@/lib/platformWallet";
 import { getPoolEscrowAbiJson, getPoolEscrowAddress } from "@/lib/poolEscrow";
 import { createServiceClient } from "@/lib/supabase";
 
+// Must match the ReleaseMode enum ordering in contracts/PoolEscrow.sol.
+const RELEASE_MODE_INDEX: Record<string, number> = {
+  threshold_or_deadline: 0,
+  threshold_only: 1,
+  deadline_only: 2,
+};
+
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
   const creatorId = cookieStore.get("harambee_session")?.value;
@@ -52,6 +59,7 @@ export async function POST(request: NextRequest) {
 
   const deadlineUnix = Math.floor(new Date(deadline).getTime() / 1000);
   const targetAmountWei = parseEther(targetAmount).toString();
+  const releaseModeIndex = RELEASE_MODE_INDEX[releaseMode] ?? RELEASE_MODE_INDEX.threshold_or_deadline;
 
   const contractsClient = createCircleContractsClient();
 
@@ -71,8 +79,8 @@ export async function POST(request: NextRequest) {
   const txResponse = await walletsClient.createContractExecutionTransaction({
     walletId,
     contractAddress,
-    abiFunctionSignature: "createPool(uint256,uint256,address)",
-    abiParameters: [targetAmountWei, String(deadlineUnix), recipient],
+    abiFunctionSignature: "createPool(uint256,uint256,address,uint8)",
+    abiParameters: [targetAmountWei, String(deadlineUnix), recipient, String(releaseModeIndex)],
     fee: { type: "level", config: { feeLevel: "MEDIUM" } },
   });
 

@@ -45,7 +45,12 @@ export async function POST(request: NextRequest) {
     const thresholdMet = BigInt(currentAmountWei) >= BigInt(targetAmountWei);
     const deadlinePassed = Math.floor(Date.now() / 1000) >= Number(deadlineStr);
 
-    if (thresholdMet || deadlinePassed) {
+    // deadline_only pools never release early — only trigger once the
+    // deadline is reached, even if the target was met sooner.
+    const shouldTrigger =
+      pool.release_mode === "deadline_only" ? deadlinePassed : thresholdMet || deadlinePassed;
+
+    if (shouldTrigger) {
       const result = await checkAndReleasePool(
         pool.id,
         pool.onchain_pool_id,
