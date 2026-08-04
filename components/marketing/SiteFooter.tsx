@@ -1,4 +1,12 @@
+import Link from "next/link";
 import { Logo } from "@/components/Logo";
+
+const COLUMNS: { h: string; items: { label: string; href?: string }[] }[] = [
+  {
+    h: "Product",
+    items: [{ label: "Documentation", href: "/docs" }],
+  },
+];
 
 export function SiteFooter() {
   return (
@@ -12,17 +20,19 @@ export function SiteFooter() {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-x-12 gap-y-2 sm:grid-cols-3">
-            {[
-              { h: "Product", items: ["How it works", "Use cases", "Security"] },
-              { h: "Company", items: ["About", "Blog", "Contact"] },
-              { h: "Legal", items: ["Privacy", "Terms"] },
-            ].map((col) => (
+            {COLUMNS.map((col) => (
               <div key={col.h}>
                 <p className="text-xs font-semibold uppercase tracking-wide text-white/50">{col.h}</p>
                 <ul className="mt-3 space-y-2">
                   {col.items.map((i) => (
-                    <li key={i}>
-                      <span className="text-sm text-white/80 hover:text-white">{i}</span>
+                    <li key={i.label}>
+                      {i.href ? (
+                        <Link href={i.href} className="text-sm text-white/80 hover:text-white">
+                          {i.label}
+                        </Link>
+                      ) : (
+                        <span className="text-sm text-white/80 hover:text-white">{i.label}</span>
+                      )}
                     </li>
                   ))}
                 </ul>
