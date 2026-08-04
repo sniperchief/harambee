@@ -37,6 +37,11 @@ yarn-error.log*
 # claude code session state
 .claude/
 
+# AI build-time guidance + internal build log — kept local, not published
+CLAUDE.md
+AGENTS.md
+PROGRESS.md
+
 # Circle entity secret recovery files — never commit
 /recovery/
 recovery_file_*.dat

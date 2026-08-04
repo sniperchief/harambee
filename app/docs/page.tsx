@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import type { Metadata } from "next";
-import { Logo } from "@/components/Logo";
 import { ButtonLink } from "@/components/ui/Button";
+import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 
 export const metadata: Metadata = {
@@ -77,15 +76,7 @@ export default async function DocsPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Logo size={30} />
-          <ButtonLink href={isLoggedIn ? "/dashboard" : "/register"} size="sm" variant="primary">
-            {isLoggedIn ? "Open app" : "Get started"}
-          </ButtonLink>
-        </div>
-      </header>
+      <SiteHeader isLoggedIn={isLoggedIn} />
 
       {/* Title band */}
       <div className="border-b border-line bg-surface-2/60">

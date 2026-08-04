@@ -5,10 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ButtonLink } from "@/components/ui/Button";
 
+// Section anchors point at the landing page (/#…) so they work from any page,
+// not just the home route. /docs is a real route.
 const LINKS = [
-  { href: "#how", label: "How it works" },
-  { href: "#use-cases", label: "Use cases" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/#how", label: "How it works" },
+  { href: "/#use-cases", label: "Use cases" },
+  { href: "/#faq", label: "FAQ" },
   { href: "/docs", label: "Documentation" },
 ];
 
@@ -46,7 +48,7 @@ export function SiteHeader({ isLoggedIn }: { isLoggedIn: boolean }) {
         <Logo size={30} />
         <nav className="hidden items-center gap-1 md:flex">
           {LINKS.map((l) =>
-            l.href.startsWith("#") ? (
+            l.href.includes("#") ? (
               <a
                 key={l.href}
                 href={l.href}
@@ -143,7 +145,7 @@ export function SiteHeader({ isLoggedIn }: { isLoggedIn: boolean }) {
                 open ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
               }`;
               const style = { transitionDelay: open ? `${80 + i * 45}ms` : "0ms" };
-              return l.href.startsWith("#") ? (
+              return l.href.includes("#") ? (
                 <a key={l.href} href={l.href} onClick={close} className={cls} style={style}>
                   {l.label}
                 </a>
