@@ -66,10 +66,12 @@ export function SiteHeader({ isLoggedIn }: { isLoggedIn: boolean }) {
           )}
         </nav>
         <div className="flex items-center gap-2">
+          {/* Auth CTAs are desktop-only (md+). On mobile the full-screen menu
+              carries them, so the mobile header stays just logo + hamburger. */}
           {isLoggedIn ? (
             <Link
               href="/dashboard"
-              className="inline-flex h-9 items-center rounded-none bg-navy px-4 text-sm font-semibold text-white shadow-md transition-all hover:-translate-y-px hover:bg-[#12365f] hover:shadow-lg"
+              className="hidden h-9 items-center rounded-none bg-navy px-4 text-sm font-semibold text-white shadow-md transition-all hover:-translate-y-px hover:bg-[#12365f] hover:shadow-lg md:inline-flex"
             >
               Open app
             </Link>
@@ -77,13 +79,13 @@ export function SiteHeader({ isLoggedIn }: { isLoggedIn: boolean }) {
             <>
               <Link
                 href="/login"
-                className="hidden h-9 items-center rounded-none px-3 text-sm font-semibold text-black sm:inline-flex"
+                className="hidden h-9 items-center rounded-none px-3 text-sm font-semibold text-black md:inline-flex"
               >
                 Sign in
               </Link>
               <Link
                 href="/register"
-                className="inline-flex h-9 items-center rounded-none bg-navy px-4 text-sm font-semibold text-white shadow-md transition-all hover:-translate-y-px hover:bg-[#12365f] hover:shadow-lg"
+                className="hidden h-9 items-center rounded-none bg-navy px-4 text-sm font-semibold text-white shadow-md transition-all hover:-translate-y-px hover:bg-[#12365f] hover:shadow-lg md:inline-flex"
               >
                 Get started
               </Link>
