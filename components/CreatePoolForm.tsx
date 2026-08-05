@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Field, Input, Textarea, Select, AmountInput } from "@/components/ui/Field";
 import { formatUsdc, formatLocal, formatDateTime } from "@/lib/format";
+import { useFxRate } from "@/lib/useFxRate";
 
 const CURRENCIES = ["NGN", "KES", "GHS", "USD", "GBP", "EUR", "ZAR"];
 
@@ -96,6 +97,7 @@ export function CreatePoolForm() {
   const [status, setStatus] = useState<"idle" | "working" | "error" | "done">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const fxRate = useFxRate(targetCurrency);
 
   function computeDeadlineIso() {
     if (durationKey === "custom") return customDeadline ? new Date(customDeadline).toISOString() : "";
@@ -159,7 +161,9 @@ export function CreatePoolForm() {
               <dt className="text-muted">Target</dt>
               <dd className="font-semibold text-ink tnum">
                 ${formatUsdc(targetAmount)}
-                {targetCurrency ? ` · ≈ ${formatLocal(targetAmount, targetCurrency)}` : ""}
+                {targetCurrency && fxRate !== null
+                  ? ` · ≈ ${formatLocal(Number(targetAmount) * fxRate, targetCurrency)}`
+                  : ""}
               </dd>
             </div>
             <div className="flex items-center justify-between gap-3">
@@ -315,7 +319,7 @@ export function CreatePoolForm() {
               {[
                 ["Name", title],
                 ["Description", description || "—"],
-                ["Target", `$${formatUsdc(targetAmount)} USDC${targetCurrency ? ` · ≈ ${formatLocal(targetAmount, targetCurrency)}` : ""}`],
+                ["Target", `$${formatUsdc(targetAmount)} USDC${targetCurrency && fxRate !== null ? ` · ≈ ${formatLocal(Number(targetAmount) * fxRate, targetCurrency)}` : ""}`],
                 ["Recipient", recipientWalletAddress || "Your own wallet"],
                 ["Deadline", computeDeadlineIso() ? formatDateTime(computeDeadlineIso()) : "—"],
                 ["Release", RELEASE_MODES.find((m) => m.key === releaseMode)?.title ?? ""],

@@ -40,7 +40,14 @@ async function readPoolState(
 // result. Local-currency display is release-only and best-effort.
 async function finalize(poolId: string, targetCurrency: string | null | undefined, state: PoolState, txHash?: string) {
   const supabase = createServiceClient();
-  await supabase.from("pools").update({ current_amount: state.currentAmount, status: state.status }).eq("id", poolId);
+  const update: Record<string, unknown> = { current_amount: state.currentAmount, status: state.status };
+  // Persist the release tx so the pool page can link it on the explorer. Only
+  // on a real release-with-tx — never overwrite an existing hash with null when
+  // we hit the idempotent, already-terminal path (no txHash).
+  if (txHash && state.status === "released") {
+    update.release_tx_hash = txHash;
+  }
+  await supabase.from("pools").update(update).eq("id", poolId);
 
   let localCurrencyAmount: string | undefined;
   let fxRate: number | undefined;

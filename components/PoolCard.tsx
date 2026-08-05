@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { LocalAmount } from "@/components/LocalAmount";
 import {
   formatUsdc,
-  formatLocal,
   progressPercent,
   statusMeta,
   timeUntil,
@@ -91,7 +91,7 @@ export function PoolCard({ pool }: { pool: PoolSummary }) {
             </p>
             <p className="text-sm text-white/50 tnum">
               of ${formatUsdc(pool.target_amount)}
-              {pool.target_currency ? ` · ${formatLocal(pool.target_amount, pool.target_currency)}` : ""}
+              <LocalAmount value={pool.target_amount} currency={pool.target_currency} prefix=" · " />
             </p>
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/12">

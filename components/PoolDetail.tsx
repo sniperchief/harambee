@@ -11,6 +11,8 @@ import { AmountInput } from "@/components/ui/Field";
 import { CountUp } from "@/components/ui/CountUp";
 import { contributeWithPasskey, refundWithPasskey } from "@/lib/poolContribute";
 import { useWalletBalance } from "@/lib/useWalletBalance";
+import { useFxRate } from "@/lib/useFxRate";
+import { txUrl, addressUrl } from "@/lib/explorer";
 import { friendlyPasskeyError } from "@/lib/authErrors";
 import {
   formatUsdc,
@@ -36,6 +38,7 @@ type Pool = {
   local_currency_amount: string | number | null;
   fx_rate: string | number | null;
   recipient_wallet_address?: string | null;
+  release_tx_hash?: string | null;
   created_at?: string;
 };
 
@@ -54,6 +57,7 @@ type PoolState = {
   localCurrencyAmount?: string | number | null;
   targetCurrency?: string | null;
   fxRate?: string | number | null;
+  txHash?: string;
 };
 
 const POLL_INTERVAL_MS = 4000;
@@ -107,6 +111,7 @@ export function PoolDetail({
   const [now, setNow] = useState(() => Date.now());
   const [yieldEarned, setYieldEarned] = useState<string | null>(null);
   const { balance, refresh: refreshBalance } = useWalletBalance();
+  const fxRate = useFxRate(pool.target_currency);
 
   const refreshYield = useCallback(async () => {
     try {
@@ -279,8 +284,10 @@ export function PoolDetail({
                 <p className="mt-1 text-4xl font-bold tracking-tight text-navy sm:text-5xl">
                   <CountUp value={current} prefix="$" />
                 </p>
-                {pool.target_currency && (
-                  <p className="mt-1 text-sm text-muted tnum">≈ {formatLocal(current, pool.target_currency)}</p>
+                {pool.target_currency && fxRate !== null && (
+                  <p className="mt-1 text-sm text-muted tnum">
+                    ≈ {formatLocal(Number(current) * fxRate, pool.target_currency)}
+                  </p>
                 )}
               </div>
               <div className="text-right">
@@ -304,7 +311,9 @@ export function PoolDetail({
               <div className="rounded-[12px] bg-brand-strong px-2 py-3.5 text-center">
                 <p className="text-xs font-medium text-white/70">Target</p>
                 <p className="mt-1 text-sm font-semibold text-white tnum">
-                  {pool.target_currency ? formatLocal(target, pool.target_currency) : `$${formatUsdc(target, { decimals: 0 })}`}
+                  {pool.target_currency && fxRate !== null
+                    ? formatLocal(Number(target) * fxRate, pool.target_currency)
+                    : `$${formatUsdc(target, { decimals: 0 })}`}
                 </p>
               </div>
             </div>
@@ -331,6 +340,16 @@ export function PoolDetail({
                       includes +${formatUsdc(releasedYield, { decimals: 4 })} yield earned
                     </p>
                   )}
+                  {(state.txHash ?? pool.release_tx_hash) && (
+                    <a
+                      href={txUrl((state.txHash ?? pool.release_tx_hash)!)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-success hover:underline"
+                    >
+                      View release on-chain ↗
+                    </a>
+                  )}
                 </div>
               </div>
             </Card>
@@ -352,7 +371,22 @@ export function PoolDetail({
                       <Avatar name={name} size={38} />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-ink tnum">{c.contributor ? shortAddress(c.contributor) : "Anonymous"}</p>
-                        <p className="text-xs text-muted">{timeAgo(c.created_at)}</p>
+                        <p className="text-xs text-muted">
+                          {timeAgo(c.created_at)}
+                          {c.tx_hash && (
+                            <>
+                              {" · "}
+                              <a
+                                href={txUrl(c.tx_hash)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-brand-600 hover:underline"
+                              >
+                                on-chain ↗
+                              </a>
+                            </>
+                          )}
+                        </p>
                       </div>
                       <p className="text-sm font-semibold text-ink tnum">+${formatUsdc(c.amount)}</p>
                     </li>
@@ -360,6 +394,14 @@ export function PoolDetail({
                 })}
               </ul>
             )}
+            <a
+              href={addressUrl(poolEscrowAddress)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-brand-600"
+            >
+              Held in escrow contract {shortAddress(poolEscrowAddress)} ↗
+            </a>
           </Card>
         </div>
 
