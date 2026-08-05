@@ -27,13 +27,25 @@ function RegisterForm() {
   const router = useRouter();
   const next = useSearchParams().get("next") ?? "/dashboard";
   const [username, setUsername] = useState("");
+  const [touched, setTouched] = useState(false);
   const [status, setStatus] = useState<"idle" | "working">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Circle's username rules: 5–50 chars, letters/numbers and _ @ . : + - only.
+  // Circle accepts 5–50 chars from [A-Za-z0-9_@.:+-]; we cap at 15 for tidier
+  // usernames (a stricter subset Circle still accepts).
   const trimmed = username.trim();
-  const usernameValid = /^[A-Za-z0-9_@.:+-]{5,50}$/.test(trimmed);
-  const showFormatError = username.length > 0 && !usernameValid;
+  const usernameValid = /^[A-Za-z0-9_@.:+-]{5,15}$/.test(trimmed);
+
+  // Contextual guidance: flag a disallowed character the moment it's typed, but
+  // only mention length once the user has left the field (touched) — so we
+  // don't scold a username that's simply still being typed toward 5.
+  const hasInvalidChar = trimmed.length > 0 && /[^A-Za-z0-9_@.:+-]/.test(trimmed);
+  let usernameError: string | undefined;
+  if (hasInvalidChar) {
+    usernameError = "Letters, numbers, dots, dashes and underscores only — no spaces.";
+  } else if (touched && trimmed.length > 0 && trimmed.length < 5) {
+    usernameError = "Just a bit longer — at least 5 characters.";
+  }
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -73,8 +85,8 @@ function RegisterForm() {
         <Field
           label="Choose a username"
           htmlFor="username"
-          hint="5–50 characters — letters, numbers, and _ @ . : + - (no spaces)."
-          error={showFormatError ? "Only letters, numbers and _ @ . : + - are allowed — 5 to 50 characters, no spaces." : undefined}
+          hint="5–15 characters. Letters and numbers work best."
+          error={usernameError}
         >
           <Input
             id="username"
@@ -82,6 +94,8 @@ function RegisterForm() {
             placeholder="e.g. amara_o"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            onBlur={() => setTouched(true)}
+            maxLength={15}
             autoFocus
             autoComplete="username"
             autoCapitalize="none"
