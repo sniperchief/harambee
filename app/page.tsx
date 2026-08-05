@@ -155,11 +155,11 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* FAQ — navy */}
-        <section id="faq" className="scroll-mt-20 bg-navy">
+        {/* FAQ — coral */}
+        <section id="faq" className="scroll-mt-20 bg-brand-strong">
           <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
             <div className="text-center">
-              <p className="text-sm font-semibold text-brand">FAQ</p>
+              <p className="text-sm font-semibold text-white/80">FAQ</p>
               <h2 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
                 Questions people ask first
               </h2>

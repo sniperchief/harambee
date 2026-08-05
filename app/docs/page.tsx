@@ -79,13 +79,13 @@ export default async function DocsPage() {
       <SiteHeader isLoggedIn={isLoggedIn} />
 
       {/* Title band */}
-      <div className="border-b border-line bg-surface-2/60">
+      <div className="bg-brand-strong">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-          <p className="text-sm font-semibold text-brand-600">Documentation</p>
-          <h1 className="mt-2 text-[34px] font-bold leading-[1.1] tracking-tight text-navy sm:text-[44px]">
+          <p className="text-sm font-semibold text-white/80">Documentation</p>
+          <h1 className="mt-2 text-[34px] font-bold leading-[1.1] tracking-tight text-white sm:text-[44px]">
             How Harambee works
           </h1>
-          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-white/85">
             A technical walkthrough of the whole system — from the smart-contract escrow that holds
             every pool, to the passkey wallets that fund it, to what&apos;s genuinely live on-chain
             versus simulated for the demo. Built on Circle&apos;s Arc L1, settled in USDC.
@@ -103,7 +103,7 @@ export default async function DocsPage() {
                 <li key={item.id}>
                   <a
                     href={`#${item.id}`}
-                    className="-ml-px block border-l-2 border-transparent py-1 pl-4 text-sm text-muted hover:border-brand hover:text-navy"
+                    className="-ml-px block border-l-2 border-transparent py-1 pl-4 text-sm text-muted hover:border-brand-strong hover:text-brand-strong"
                   >
                     {item.label}
                   </a>

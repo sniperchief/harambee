@@ -8,7 +8,6 @@ import { ButtonLink } from "@/components/ui/Button";
 // Section anchors point at the landing page (/#…) so they work from any page,
 // not just the home route. /docs is a real route.
 const LINKS = [
-  { href: "/#how", label: "How it works" },
   { href: "/#use-cases", label: "Use cases" },
   { href: "/#faq", label: "FAQ" },
   { href: "/docs", label: "Documentation" },
