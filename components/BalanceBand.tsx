@@ -3,13 +3,27 @@
 import { useState } from "react";
 import { useWalletBalance } from "@/lib/useWalletBalance";
 import { formatUsdc } from "@/lib/format";
-import { PillButton, PillLink } from "@/components/design/PillButton";
+import { PillButton } from "@/components/design/PillButton";
 
 // The dashboard's money surface: an ink panel with the available balance as a
-// large DM Mono figure, and reversed outlined pills to fund or copy the wallet.
+// large DM Mono figure. "Add funds" copies the wallet address — funding is a
+// plain USDC transfer to it — and says, right when it matters, which network
+// to send on (sending on another network or another token won't arrive).
 export function BalanceBand({ address }: { address: string | null }) {
   const { balance, loading } = useWalletBalance();
-  const [copied, setCopied] = useState(false);
+  const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle");
+
+  async function addFunds() {
+    if (!address) return;
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopy("copied");
+    } catch {
+      // Clipboard blocked (permissions / insecure context): show the address
+      // so it can be copied by hand.
+      setCopy("failed");
+    }
+  }
 
   return (
     <div className="flex flex-col gap-8 rounded-[20px] bg-ink-black p-6 text-bone-white sm:p-9 md:flex-row md:items-end md:justify-between">
@@ -24,29 +38,21 @@ export function BalanceBand({ address }: { address: string | null }) {
             </p>
           )}
         </div>
-        <p className="mt-3 font-dm-mono text-sm text-bone-white/80">USDC on Arc · gasless</p>
       </div>
 
-      <div className="flex shrink-0 flex-wrap gap-3">
-        {/* Funding is a plain USDC transfer to the wallet address, which Settings explains. */}
-        <PillLink href="/settings" variant="outlined-light" compact>
-          Add funds
-        </PillLink>
-        <PillButton
-          variant="outlined-light"
-          compact
-          disabled={!address}
-          onClick={async () => {
-            if (!address) return;
-            try {
-              await navigator.clipboard.writeText(address);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1600);
-            } catch {}
-          }}
-        >
-          {copied ? "Copied" : "Copy address"}
+      <div className="flex shrink-0 flex-col items-start gap-3 md:items-end">
+        <PillButton variant="outlined-light" compact onClick={addFunds} disabled={!address}>
+          {copy === "copied" ? "Address copied" : "Add funds"}
         </PillButton>
+        <p aria-live="polite" className="max-w-[300px] text-sm text-bone-white/80 md:text-right">
+          {copy === "copied" && "Address copied — send USDC on the Arc network to it."}
+          {copy === "failed" && address && (
+            <>
+              Send USDC on the Arc network to{" "}
+              <span className="select-all break-all font-dm-mono text-bone-white">{address}</span>
+            </>
+          )}
+        </p>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { friendlyPasskeyError } from "@/lib/authErrors";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { PillButton, PillLink } from "@/components/design/PillButton";
 import { FieldShell, InputField, FormMessage } from "@/components/design/InputField";
+import { isValidUsername } from "@/lib/username";
 
 function RegisterForm() {
   const router = useRouter();
@@ -15,18 +16,20 @@ function RegisterForm() {
   const [touched, setTouched] = useState(false);
   const [status, setStatus] = useState<"idle" | "working">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Set when the server says the name is taken; cleared as soon as it's edited.
+  const [takenMsg, setTakenMsg] = useState<string | null>(null);
 
-  // Circle accepts 5–50 chars from [A-Za-z0-9_@.:+-]; we cap at 15 for tidier
-  // usernames (a stricter subset Circle still accepts).
   const trimmed = username.trim();
-  const usernameValid = /^[A-Za-z0-9_@.:+-]{5,15}$/.test(trimmed);
+  const usernameValid = isValidUsername(trimmed);
 
   // Contextual guidance: flag a disallowed character the moment it's typed, but
   // only mention length once the user has left the field (touched) — so we
   // don't scold a username that's simply still being typed toward 5.
   const hasInvalidChar = trimmed.length > 0 && /[^A-Za-z0-9_@.:+-]/.test(trimmed);
   let usernameError: string | undefined;
-  if (hasInvalidChar) {
+  if (takenMsg) {
+    usernameError = takenMsg;
+  } else if (hasInvalidChar) {
     usernameError = "Letters, numbers, dots, dashes and underscores only — no spaces.";
   } else if (touched && trimmed.length > 0 && trimmed.length < 5) {
     usernameError = "Just a bit longer — at least 5 characters.";
@@ -37,12 +40,26 @@ function RegisterForm() {
     if (!usernameValid) return;
     setStatus("working");
     setErrorMsg(null);
+
+    // Check the name is free BEFORE creating the passkey, so nobody ends up
+    // with a passkey on their device but no account. If the check itself
+    // can't be reached, carry on — the server re-checks on sign-up.
+    try {
+      const r = await fetch(`/api/username?u=${encodeURIComponent(trimmed)}`);
+      const check = await r.json();
+      if (r.ok && check.available === false) {
+        setTakenMsg(check.problem ?? "That username is taken — try another.");
+        setStatus("idle");
+        return;
+      }
+    } catch {}
+
     try {
       const { credentialId, address, publicKey } = await registerPasskey(trimmed);
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credentialId, address, publicKey }),
+        body: JSON.stringify({ credentialId, address, publicKey, username: trimmed }),
       });
       if (!response.ok) {
         const body = await response.json();
@@ -84,7 +101,10 @@ function RegisterForm() {
             type="text"
             placeholder="e.g. amara_o"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              setTakenMsg(null);
+            }}
             onBlur={() => setTouched(true)}
             maxLength={15}
             autoFocus

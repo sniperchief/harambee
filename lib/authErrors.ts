@@ -16,6 +16,11 @@ export function friendlyPasskeyError(err: unknown): { message: string; cancelled
     return { cancelled: true, message: "" };
   }
 
+  // Server: someone else claimed the username between the check and sign-up.
+  if (has(/username.*taken/i)) {
+    return { cancelled: false, message: "That username was just taken — please choose another." };
+  }
+
   // A passkey for this already exists on the device.
   if (name === "InvalidStateError" || has(/already (registered|exists)|duplicate|exclude ?credentials/i)) {
     return { cancelled: false, message: "There's already a passkey for this on your device — try signing in instead." };
