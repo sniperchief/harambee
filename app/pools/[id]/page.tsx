@@ -1,10 +1,13 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PoolDetail, type Contribution } from "@/components/PoolDetail";
 import { Logo } from "@/components/Logo";
+import { NavigationBar } from "@/components/design/NavigationBar";
+import { PillLink } from "@/components/design/PillButton";
+import { Section } from "@/components/design/Section";
 import { getPoolEscrowAddress } from "@/lib/poolEscrow";
 import { getOnchainContribution } from "@/lib/onchainContribution";
-import { getSessionUserId } from "@/lib/session";
+import { getSessionUser, displayName } from "@/lib/session";
+import { TopNav } from "@/components/TopNav";
 import { createServiceClient } from "@/lib/supabase";
 
 export default async function PoolPage({ params }: { params: Promise<{ id: string }> }) {
@@ -21,18 +24,9 @@ export default async function PoolPage({ params }: { params: Promise<{ id: strin
     .single();
   if (!pool) notFound();
 
-  const userId = await getSessionUserId();
-
-  let viewerWalletAddress: string | null = null;
-  const isLoggedIn = !!userId;
-  if (userId) {
-    const { data: user } = await supabase
-      .from("users")
-      .select("modular_wallet_address")
-      .eq("id", userId)
-      .single();
-    viewerWalletAddress = user?.modular_wallet_address ?? null;
-  }
+  const viewer = await getSessionUser();
+  const isLoggedIn = !!viewer;
+  const viewerWalletAddress: string | null = viewer?.modular_wallet_address ?? null;
 
   const { data: contribRaw } = (await supabase
     .from("pool_contributions")
@@ -77,30 +71,37 @@ export default async function PoolPage({ params }: { params: Promise<{ id: strin
     }
   }
 
+  // Signed-in viewers get the app nav; visitors get a bare bar with Sign in.
+  // Either way the page's one Marigold is "Contribute".
   return (
-    <div className="min-h-screen bg-canvas">
-      <header className="sticky top-0 z-40 border-b border-line bg-surface/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <Logo href={isLoggedIn ? "/dashboard" : "/"} size={30} />
-          {isLoggedIn ? (
-            <Link href="/dashboard" className="text-sm font-semibold text-ink hover:text-brand">Dashboard</Link>
-          ) : (
-            <Link href="/login" className="inline-flex h-9 items-center rounded-none bg-navy px-4 text-sm font-semibold text-white shadow-md hover:bg-[#12365f] hover:shadow-lg">Sign in</Link>
-          )}
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:py-10">
-        <PoolDetail
-          pool={pool}
-          poolEscrowAddress={getPoolEscrowAddress()}
-          isLoggedIn={isLoggedIn}
-          viewerWalletAddress={viewerWalletAddress}
-          contributions={contributions}
-          contributorCount={contributorCount}
-          viewerContributed={viewerContributed}
-          viewerClaimed={viewerClaimed}
+    <div className="min-h-screen">
+      {viewer ? (
+        <TopNav walletAddress={viewer.modular_wallet_address} name={displayName(viewer)} />
+      ) : (
+        <NavigationBar
+          brand={<Logo href="/" />}
+          links={[]}
+          actions={
+            <PillLink href={`/login?next=/pools/${id}`} variant="outlined" compact>
+              Sign in
+            </PillLink>
+          }
         />
+      )}
+
+      <main>
+        <Section className="!pt-14">
+          <PoolDetail
+            pool={pool}
+            poolEscrowAddress={getPoolEscrowAddress()}
+            isLoggedIn={isLoggedIn}
+            viewerWalletAddress={viewerWalletAddress}
+            contributions={contributions}
+            contributorCount={contributorCount}
+            viewerContributed={viewerContributed}
+            viewerClaimed={viewerClaimed}
+          />
+        </Section>
       </main>
     </div>
   );

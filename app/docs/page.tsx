@@ -1,8 +1,11 @@
 import { getSessionUserId } from "@/lib/session";
 import type { Metadata } from "next";
-import { ButtonLink } from "@/components/ui/Button";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
+import { Section as PageSection, SectionDivider } from "@/components/design/Section";
+import { SurfaceCard, WarmCard } from "@/components/design/Card";
+import { Tag } from "@/components/design/Tag";
+import { PillLink } from "@/components/design/PillButton";
 
 export const metadata: Metadata = {
   title: "Documentation — Harambee",
@@ -23,15 +26,13 @@ const TOC = [
   { id: "roadmap", label: "Roadmap" },
 ];
 
-// Inline monospace token for contract functions / identifiers.
+// Inline DM Mono token for contract functions / identifiers.
 function Code({ children }: { children: React.ReactNode }) {
-  return (
-    <code className="rounded-[6px] bg-surface-2 px-1.5 py-0.5 font-mono text-[13px] text-navy">
-      {children}
-    </code>
-  );
+  return <code className="rounded-md bg-buttercream px-1.5 py-0.5 font-dm-mono text-[15px] text-ink-black [overflow-wrap:anywhere]">{children}</code>;
 }
 
+// A documentation chapter: Champ heading over DM Sans body, ruled off by a
+// Section Divider.
 function Section({
   id,
   title,
@@ -44,14 +45,17 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-24 border-t border-line pt-10">
-      {eyebrow && <p className="text-sm font-semibold text-brand-600">{eyebrow}</p>}
-      <h2 className="mt-1 text-2xl font-bold tracking-tight text-navy sm:text-[28px]">{title}</h2>
-      <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-muted">{children}</div>
+    <section id={id} className="scroll-mt-20">
+      <SectionDivider className="mb-12" />
+      {eyebrow && <p className="font-dm-mono text-sm text-char">{eyebrow}</p>}
+      <h2 className="type-heading mt-3">{title}</h2>
+      <div className="mt-6 space-y-4 text-body text-ink-black/80">{children}</div>
     </section>
   );
 }
 
+// Callouts are Warm Cards; the "warning" tone adds an ink rule on the left
+// (DESIGN.md: express semantics through form, not hue).
 function Callout({
   tone = "brand",
   title,
@@ -61,12 +65,11 @@ function Callout({
   title: string;
   children: React.ReactNode;
 }) {
-  const ring = tone === "warning" ? "border-warning/40 bg-warning-50" : "border-brand/30 bg-brand-50";
   return (
-    <div className={`rounded-[14px] border ${ring} p-4`}>
-      <p className="text-sm font-semibold text-navy">{title}</p>
-      <div className="mt-1.5 text-[14px] leading-relaxed text-navy/75">{children}</div>
-    </div>
+    <WarmCard className={tone === "warning" ? "border-l-[4px] border-ink-black" : ""}>
+      <p className="type-sub-display">{title}</p>
+      <div className="mt-2 text-body text-ink-black/80">{children}</div>
+    </WarmCard>
   );
 }
 
@@ -74,54 +77,46 @@ export default async function DocsPage() {
   const isLoggedIn = !!(await getSessionUserId());
 
   return (
-    <div className="flex min-h-screen flex-col bg-canvas">
+    <div className="flex min-h-screen flex-col">
       <SiteHeader isLoggedIn={isLoggedIn} />
 
-      {/* Title band */}
-      <div className="bg-brand-strong">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-          <p className="text-sm font-semibold text-white/80">Documentation</p>
-          <h1 className="mt-2 text-[34px] font-bold leading-[1.1] tracking-tight text-white sm:text-[44px]">
-            How Harambee works
-          </h1>
-          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-white/85">
-            A technical walkthrough of the whole system — from the smart-contract escrow that holds
-            every pool, to the passkey wallets that fund it, to what&apos;s live today. Built on
-            Circle&apos;s Arc network, settled in USDC.
-          </p>
-        </div>
-      </div>
+      <PageSection>
+        <Tag>Documentation</Tag>
+        <h1 className="type-display mt-6 max-w-4xl">How Harambee works</h1>
+        <p className="type-subheading mt-6 max-w-2xl opacity-80">
+          A technical walkthrough of the whole system — from the smart-contract escrow that holds
+          every pool, to the passkey wallets that fund it, to what&apos;s live today. Built on
+          Circle&apos;s Arc network, settled in USDC.
+        </p>
+      </PageSection>
 
-      {/* Body: sticky TOC + content */}
-      <main className="mx-auto w-full max-w-6xl flex-1 gap-12 px-4 py-12 sm:px-6 lg:grid lg:grid-cols-[220px_1fr]">
+      {/* Body: sticky TOC card + chapters */}
+      <main className="section__inner w-full flex-1 gap-12 pb-20 lg:grid lg:grid-cols-[240px_1fr]">
         <aside className="hidden lg:block">
-          <nav className="sticky top-24">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">On this page</p>
-            <ul className="mt-3 space-y-1.5 border-l border-line">
+          <SurfaceCard className="sticky top-20 !p-6">
+            <p className="text-sm text-char">On this page</p>
+            <ul className="mt-3">
               {TOC.map((item) => (
                 <li key={item.id}>
-                  <a
-                    href={`#${item.id}`}
-                    className="-ml-px block border-l-2 border-transparent py-1 pl-4 text-sm text-muted hover:border-brand-strong hover:text-brand-strong"
-                  >
+                  <a href={`#${item.id}`} className="block py-1.5 text-body text-ink-black underline-offset-4 hover:underline">
                     {item.label}
                   </a>
                 </li>
               ))}
             </ul>
-          </nav>
+          </SurfaceCard>
         </aside>
 
         <article className="min-w-0 space-y-12">
-          {/* Overview — no top border for the first one */}
-          <section id="overview" className="scroll-mt-24">
-            <p className="text-sm font-semibold text-brand-600">Overview</p>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight text-navy sm:text-[28px]">
+          {/* Overview — no top divider for the first one */}
+          <section id="overview" className="scroll-mt-20">
+            <p className="font-dm-mono text-sm text-char">Overview</p>
+            <h2 className="type-heading mt-3">
               What Harambee is
             </h2>
-            <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-muted">
+            <div className="mt-6 space-y-4 text-body text-ink-black/80">
               <p>
-                <span className="font-semibold text-ink">Harambee</span> — Swahili for &ldquo;all
+                <span className="font-semibold text-ink-black">Harambee</span> — Swahili for &ldquo;all
                 pull together&rdquo; — is group-pooling for money toward a shared goal. Someone
                 creates a pool with a target and a deadline, shares one link, and contributors fund
                 it. Money is held in a smart-contract escrow and leaves it only by the pool&apos;s
@@ -139,19 +134,19 @@ export default async function DocsPage() {
             <p>The system has three layers:</p>
             <ul className="space-y-2">
               <li>
-                <span className="font-semibold text-ink">On-chain (Arc mainnet).</span> One Solidity
+                <span className="font-semibold text-ink-black">On-chain (Arc mainnet).</span> One Solidity
                 contract, <Code>PoolEscrow</Code>, holds and moves funds. Arc&apos;s native currency{" "}
                 <em>is</em> USDC (18 decimals at the protocol level), so pools use native-value
                 transfers, not ERC-20 <Code>transferFrom</Code>.
               </li>
               <li>
-                <span className="font-semibold text-ink">Circle infrastructure.</span> Developer-Controlled
+                <span className="font-semibold text-ink-black">Circle infrastructure.</span> Developer-Controlled
                 Wallets (server-custodied) for platform actions, Modular Wallets + WebAuthn passkeys
                 (self-custodial ERC-4337 smart accounts) for contributors, and Gas Station to sponsor
                 gas so contributions are free to make.
               </li>
               <li>
-                <span className="font-semibold text-ink">App (Next.js 16 + Supabase).</span> The web
+                <span className="font-semibold text-ink-black">App (Next.js 16 + Supabase).</span> The web
                 app (App Router, TypeScript, Tailwind) plus a Postgres database that mirrors on-chain
                 state for fast reads. The contract is always the source of truth — Supabase is synced
                 from it after every state change, never the other way around.
@@ -163,20 +158,20 @@ export default async function DocsPage() {
             <p>Every pool moves through the same path:</p>
             <ol className="space-y-3">
               <li>
-                <span className="font-semibold text-ink">1. Create.</span> The creator sets a title,
+                <span className="font-semibold text-ink-black">1. Create.</span> The creator sets a title,
                 target, deadline, release mode, and recipient (defaulting to their own wallet). The
                 app calls <Code>createPool</Code> on-chain, then stores the pool with its real
                 on-chain id and a shareable link.
               </li>
               <li>
-                <span className="font-semibold text-ink">2. Contribute.</span> Anyone with the link
+                <span className="font-semibold text-ink-black">2. Contribute.</span> Anyone with the link
                 signs in with a passkey and contributes. Each contribution calls{" "}
                 <Code>contribute(poolId)</Code>, which holds the funds in the escrow contract and
                 records the contributor. The server then checks the transaction on-chain before
                 showing it in the pool&apos;s history.
               </li>
               <li>
-                <span className="font-semibold text-ink">3. Release or refund.</span> When the target
+                <span className="font-semibold text-ink-black">3. Release or refund.</span> When the target
                 is hit (or the deadline passes, depending on release mode), the escrow either releases
                 everything raised to the recipient or marks the pool refundable, so each contributor
                 can take back exactly what they put in. The app checks open pools so deadline-based
@@ -187,7 +182,7 @@ export default async function DocsPage() {
 
           <Section id="contracts" title="Smart contracts" eyebrow="On-chain">
             <p>
-              <span className="font-semibold text-ink">PoolEscrow</span> is the custody + release
+              <span className="font-semibold text-ink-black">PoolEscrow</span> is the custody + release
               contract. Key functions:
             </p>
             <ul className="space-y-2">
@@ -210,7 +205,7 @@ export default async function DocsPage() {
               </li>
             </ul>
             <p>
-              Three <span className="font-semibold text-ink">release modes</span> are supported:
+              Three <span className="font-semibold text-ink-black">release modes</span> are supported:
               release on target-or-deadline (whichever is first), on target only (refund if the
               deadline beats it), or at the deadline only.
             </p>
@@ -227,7 +222,7 @@ export default async function DocsPage() {
             </p>
             <ul className="space-y-2">
               <li>
-                <span className="font-semibold text-ink">Contributors are self-custodial.</span> Each
+                <span className="font-semibold text-ink-black">Contributors are self-custodial.</span> Each
                 user has a Circle Modular Wallet — an ERC-4337 smart account owned by their passkey.
                 Only they can authorize spending from it. This matters because{" "}
                 <Code>contribute()</Code> and <Code>refund()</Code> use <Code>msg.sender</Code> to
@@ -235,7 +230,7 @@ export default async function DocsPage() {
                 user&apos;s own wallet.
               </li>
               <li>
-                <span className="font-semibold text-ink">The platform is server-custodial.</span> A
+                <span className="font-semibold text-ink-black">The platform is server-custodial.</span> A
                 single Developer-Controlled wallet submits <Code>createPool</Code> and{" "}
                 <Code>checkAndRelease</Code> — calls where <Code>msg.sender</Code> is irrelevant
                 (anyone may trigger a release; the contract enforces the rule). This keeps the browser
@@ -246,7 +241,7 @@ export default async function DocsPage() {
               It&apos;s also the fork the roadmap builds on: a future credit-card contributor has no
               passkey wallet, so their contribution can&apos;t be self-custodial — the platform would
               custody it and track their share off-chain. Two lanes, one pool. See{" "}
-              <a href="#roadmap" className="font-semibold text-brand-600 hover:underline">
+              <a href="#roadmap" className="font-semibold text-ink-black underline underline-offset-4">
                 Roadmap
               </a>
               .
@@ -297,15 +292,15 @@ export default async function DocsPage() {
               isn&apos;t:
             </p>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] border-collapse text-left text-[14px]">
+              <table className="w-full min-w-[520px] border-collapse text-left text-body">
                 <thead>
-                  <tr className="border-b border-line-strong text-navy">
+                  <tr className="border-b-[1.5px] border-ink-black text-ink-black">
                     <th className="py-2 pr-4 font-semibold">Capability</th>
                     <th className="py-2 pr-4 font-semibold">Status</th>
                     <th className="py-2 font-semibold">Notes</th>
                   </tr>
                 </thead>
-                <tbody className="text-muted">
+                <tbody className="text-ink-black/80">
                   {[
                     ["Escrow, contribute, release, refund", "Real", "Live on Arc mainnet with real USDC."],
                     ["Passkey wallets + gasless txs", "Real", "Self-custodial ERC-4337 + Gas Station."],
@@ -313,20 +308,10 @@ export default async function DocsPage() {
                     ["Credit-card contributions", "Roadmap", "Not built yet."],
                     ["Fiat off-ramp to bank/mobile money", "Roadmap", "No provider supports Arc yet."],
                   ].map(([cap, status, notes]) => (
-                    <tr key={cap} className="border-b border-line align-top">
-                      <td className="py-2.5 pr-4 font-medium text-ink">{cap}</td>
+                    <tr key={cap} className="border-b border-oat align-top">
+                      <td className="py-2.5 pr-4 font-medium text-ink-black">{cap}</td>
                       <td className="py-2.5 pr-4">
-                        <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
-                            status === "Real"
-                              ? "bg-success-50 text-success"
-                              : status === "Display only"
-                                ? "bg-warning-50 text-warning"
-                                : "bg-surface-2 text-muted"
-                          }`}
-                        >
-                          {status}
-                        </span>
+                        <Tag tone={status === "Real" ? "black" : "cream"}>{status}</Tag>
                       </td>
                       <td className="py-2.5">{notes}</td>
                     </tr>
@@ -340,26 +325,24 @@ export default async function DocsPage() {
             <p>The clearest next milestones:</p>
             <ul className="space-y-2">
               <li>
-                <span className="font-semibold text-ink">Credit-card contributions.</span> Let
+                <span className="font-semibold text-ink-black">Credit-card contributions.</span> Let
                 non-crypto users chip in with a card: a card payment on-ramp mints USDC, the platform
                 routes it into the pool on the contributor&apos;s behalf (custodial), and their share is
                 tracked off-chain. This is the custody fork described above.
               </li>
               <li>
-                <span className="font-semibold text-ink">Fiat off-ramp.</span> Once off-ramp providers
+                <span className="font-semibold text-ink-black">Fiat off-ramp.</span> Once off-ramp providers
                 support Arc (Yellow Card, Kotani Pay, and similar cover African bank + mobile-money
                 rails), a recipient could cash out to local currency directly.
               </li>
               <li>
-                <span className="font-semibold text-ink">Production hardening.</span> Expiring
+                <span className="font-semibold text-ink-black">Production hardening.</span> Expiring
                 sessions, event-driven release triggers, and per-contributor bookkeeping for the
                 custodial lane.
               </li>
             </ul>
             <div className="pt-2">
-              <ButtonLink href={isLoggedIn ? "/pools/new" : "/register"} variant="coral" size="lg">
-                Start a pool
-              </ButtonLink>
+              <PillLink href={isLoggedIn ? "/pools/new" : "/register"}>Start a pool</PillLink>
             </div>
           </Section>
         </article>

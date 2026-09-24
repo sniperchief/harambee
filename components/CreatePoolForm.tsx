@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { Field, Input, Textarea, Select, AmountInput } from "@/components/ui/Field";
+import { PillButton } from "@/components/design/PillButton";
+import { SurfaceCard } from "@/components/design/Card";
+import { Tag, TagButton } from "@/components/design/Tag";
+import { FieldShell, InputField, TextAreaField, SelectField, FormMessage } from "@/components/design/InputField";
 import { formatUsdc, formatLocal, formatDateTime } from "@/lib/format";
 import { useFxRate } from "@/lib/useFxRate";
 
@@ -44,44 +45,36 @@ const RELEASE_MODES = [
 
 type Mode = (typeof RELEASE_MODES)[number]["key"];
 
-const STEPS = ["Goal", "Details", "Review"];
+const STEPS = ["Goal", "Terms", "Review"];
 
-function Stepper({ step }: { step: number }) {
+// "NEW POOL · STEP 1 OF 3" + Cancel, over three segment bars with labels.
+function StepHeader({ step, done }: { step: number; done: boolean }) {
   return (
-    <ol className="flex items-center gap-2">
-      {STEPS.map((label, i) => {
-        const state = i < step ? "done" : i === step ? "current" : "todo";
-        return (
-          <li key={label} className="flex flex-1 items-center gap-2">
-            <div className="flex items-center gap-2">
-              <span
-                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                  state === "done"
-                    ? "bg-success text-white"
-                    : state === "current"
-                      ? "bg-navy text-white"
-                      : "bg-surface-2 text-muted"
-                }`}
-              >
-                {state === "done" ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                ) : (
-                  i + 1
-                )}
-              </span>
-              <span className={`hidden text-sm font-medium sm:block ${state === "todo" ? "text-muted" : "text-ink"}`}>
-                {label}
-              </span>
-            </div>
-            {i < STEPS.length - 1 && (
-              <span className={`h-px flex-1 ${i < step ? "bg-success" : "bg-line"}`} />
-            )}
-          </li>
-        );
-      })}
-    </ol>
+    <div>
+      <div className="flex items-center justify-between gap-4">
+        <p className="type-eyebrow">{done ? "New pool · Live" : `New pool · Step ${step + 1} of ${STEPS.length}`}</p>
+        {!done && (
+          <Link href="/dashboard" className="border-b-[1.5px] border-ink-black pb-0.5 text-body no-underline">
+            Cancel
+          </Link>
+        )}
+      </div>
+      <ol className="mt-4 grid grid-cols-3 gap-2" aria-label="Progress">
+        {STEPS.map((label, i) => {
+          const reached = done || i <= step;
+          return (
+            <li key={label} aria-current={!done && i === step ? "step" : undefined}>
+              <span className={`block h-1.5 rounded-full ${reached ? "bg-ink-black" : "bg-[#f0e6c2]"}`} />
+              <span className={`mt-2 block text-sm ${reached ? "text-ink-black" : "text-char"}`}>{label}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
+
+const CARD_TITLE = "font-champ text-[36px] font-extrabold leading-[1.08] tracking-[0.01em] sm:text-[46px]";
 
 export function CreatePoolForm() {
   const router = useRouter();
@@ -99,15 +92,24 @@ export function CreatePoolForm() {
   const [createdId, setCreatedId] = useState<string | null>(null);
   const fxRate = useFxRate(targetCurrency);
 
-  function computeDeadlineIso() {
+  // A render-safe clock for the "Closes …" preview and custom-date validation,
+  // refreshed every 30s. The deadline actually submitted is stamped from the
+  // real clock at submit time (see handleSubmit).
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  function computeDeadlineIso(at: number = now) {
     if (durationKey === "custom") return customDeadline ? new Date(customDeadline).toISOString() : "";
     const d = DURATIONS.find((x) => x.key === durationKey);
-    return d ? new Date(Date.now() + d.ms).toISOString() : "";
+    return d ? new Date(at + d.ms).toISOString() : "";
   }
 
   const step1Valid = title.trim().length > 0 && Number(targetAmount) > 0;
   const step2Valid =
-    durationKey !== "custom" || (!!customDeadline && new Date(customDeadline).getTime() > Date.now());
+    durationKey !== "custom" || (!!customDeadline && new Date(customDeadline).getTime() > now);
 
   async function handleSubmit() {
     setStatus("working");
@@ -120,7 +122,7 @@ export function CreatePoolForm() {
           title,
           description: description || undefined,
           targetAmount,
-          deadline: computeDeadlineIso(),
+          deadline: computeDeadlineIso(Date.now()),
           recipientWalletAddress: recipientWalletAddress || undefined,
           targetCurrency: targetCurrency || undefined,
           releaseMode,
@@ -141,225 +143,226 @@ export function CreatePoolForm() {
     const link = typeof window !== "undefined" ? `${window.location.origin}/pools/${createdId}` : "";
     const deadlineIso = computeDeadlineIso();
     return (
-      <div className="animate-scale-in text-center">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-50 text-success ring-8 ring-success-50/50">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        </span>
-        <h2 className="mt-5 text-2xl font-bold tracking-tight text-navy">Your pool is live</h2>
-        <p className="mx-auto mt-2 max-w-sm text-[15px] text-muted">
-          Share it to start collecting. Every contribution is held safely in escrow until the pool&apos;s rules are met.
-        </p>
+      <div className="animate-fade-in-still">
+        <StepHeader step={STEPS.length - 1} done />
+        <SurfaceCard className="mt-8 sm:!p-10">
+          <Tag tone="black" small>Live</Tag>
+          <h2 className={`${CARD_TITLE} mt-5`}>Your pool is live</h2>
+          <p className="mt-3 text-body text-char">
+            Share it to start collecting. Every contribution is held safely in escrow until the pool&apos;s rules are met.
+          </p>
 
-        {/* Preview of the pool just created */}
-        <div className="mt-6 rounded-[16px] border border-line bg-surface-2/50 p-4 text-left">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-[15px] font-semibold text-navy">{title}</p>
-            <Badge tone="brand" dot>Open</Badge>
-          </div>
-          <dl className="mt-3 space-y-1.5 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-muted">Target</dt>
-              <dd className="font-semibold text-ink tnum">
-                ${formatUsdc(targetAmount)}
-                {targetCurrency && fxRate !== null
-                  ? ` · ≈ ${formatLocal(Number(targetAmount) * fxRate, targetCurrency)}`
-                  : ""}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-muted">Closes</dt>
-              <dd className="font-medium text-ink">{deadlineIso ? formatDateTime(deadlineIso) : "—"}</dd>
-            </div>
+          <dl className="mt-8 border-t border-ink-black">
+            {[
+              ["Pool", title],
+              [
+                "Target",
+                `$${formatUsdc(targetAmount)} USDC${
+                  targetCurrency && fxRate !== null ? ` · ≈ ${formatLocal(Number(targetAmount) * fxRate, targetCurrency)}` : ""
+                }`,
+              ],
+              ["Closes", deadlineIso ? formatDateTime(deadlineIso) : "—"],
+            ].map(([k, v]) => (
+              <div key={k} className="flex items-start justify-between gap-4 border-b border-dashed border-oat py-4">
+                <dt className="text-char">{k}</dt>
+                <dd className="max-w-[65%] break-words text-right font-medium">{v}</dd>
+              </div>
+            ))}
           </dl>
-        </div>
 
-        {/* Share — QR + link */}
-        <div className="mt-4 flex flex-col items-center gap-3.5 rounded-[16px] border border-line p-5">
-          {link && (
-            <div className="rounded-[12px] border border-line bg-white p-3">
-              <QRCodeSVG value={link} size={124} fgColor="#0f2747" bgColor="#ffffff" level="M" />
+          <div className="mt-8 flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+            {link && (
+              <div className="shrink-0 rounded-2xl border-[1.5px] border-ink-black bg-bone-white p-3">
+                <QRCodeSVG value={link} size={112} fgColor="#000000" bgColor="#ffffff" level="M" />
+              </div>
+            )}
+            <div className="w-full min-w-0">
+              <p className="text-sm text-char">Share the link, or let people scan the code in person.</p>
+              <div className="mt-3 flex items-center gap-2">
+                <InputField readOnly value={link} aria-label="Pool link" className="min-w-0 font-dm-mono text-sm" />
+                <CopyButton text={link} />
+              </div>
             </div>
-          )}
-          <p className="text-xs text-muted">Scan to open the pool — handy for sharing in person.</p>
-          <div className="flex w-full items-center gap-2 rounded-[12px] border border-line bg-surface-2 p-1.5 pl-3.5">
-            <span className="flex-1 truncate text-left text-sm text-muted tnum">{link}</span>
-            <CopyButton text={link} />
           </div>
-        </div>
+        </SurfaceCard>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Button onClick={() => router.push(`/pools/${createdId}`)} variant="coral" size="lg" className="flex-1">
-            View pool
-          </Button>
-          <Button onClick={() => router.push("/dashboard")} variant="secondary" size="lg" className="flex-1">
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+          <PillButton onClick={() => router.push("/dashboard")} variant="outlined">
             Back to dashboard
-          </Button>
+          </PillButton>
+          <PillButton onClick={() => router.push(`/pools/${createdId}`)} className="!border-ink-black">
+            View pool
+          </PillButton>
         </div>
       </div>
     );
   }
 
+  const localPreview =
+    targetCurrency && fxRate !== null && Number(targetAmount) > 0
+      ? formatLocal(Number(targetAmount) * fxRate, targetCurrency)
+      : null;
+
   return (
     <div>
-      {/* right padding keeps the last step clear of the card's corner close (X) */}
-      <div className="pr-9">
-        <Stepper step={step} />
-      </div>
+      <StepHeader step={step} done={false} />
 
-      <div className="mt-8 min-h-[344px]">
+      <SurfaceCard className="mt-8 sm:!p-10">
         {/* Step 1 — Goal */}
         {step === 0 && (
-          <div className="animate-fade-in-still flex flex-col gap-5">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-navy">What are you raising for?</h2>
-              <p className="mt-1 text-sm text-muted">Give your pool a clear name and a target.</p>
+          <div className="animate-fade-in-still flex flex-col gap-6">
+            <h2 className={CARD_TITLE}>What are you raising for?</h2>
+            <FieldShell label="Pool name" htmlFor="title">
+              <InputField id="title" placeholder="e.g. Amara & Kofi's Wedding Fund" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            </FieldShell>
+            <FieldShell label="Description" htmlFor="desc" hint="Optional — one sentence on what the money is for.">
+              <TextAreaField id="desc" placeholder="Helping the couple celebrate with everyone they love." value={description} onChange={(e) => setDescription(e.target.value)} />
+            </FieldShell>
+            <div className="grid gap-6 sm:grid-cols-2 sm:gap-4">
+              <FieldShell label="Target (USDC)" htmlFor="target">
+                <InputField
+                  id="target"
+                  inputMode="decimal"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={targetAmount}
+                  onChange={(e) => setTargetAmount(e.target.value)}
+                  className="font-dm-mono"
+                />
+              </FieldShell>
+              <FieldShell label="Show a familiar currency" htmlFor="cur">
+                <SelectField id="cur" value={targetCurrency} onChange={(e) => setTargetCurrency(e.target.value)}>
+                  <option value="">None</option>
+                  {CURRENCIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </SelectField>
+              </FieldShell>
             </div>
-            <Field label="Pool name" htmlFor="title">
-              <Input id="title" placeholder="e.g. Amara & Kofi's Wedding Fund" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-            </Field>
-            <Field label="Description" htmlFor="desc" hint="Optional — a sentence on what the money is for.">
-              <Textarea id="desc" placeholder="Helping the couple celebrate with everyone they love." value={description} onChange={(e) => setDescription(e.target.value)} />
-            </Field>
-            <Field label="Target amount" hint="The goal you're collecting toward, in USDC.">
-              <AmountInput value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} placeholder="0.00" step="0.01" min="0" />
-            </Field>
-            <Field label="Show a familiar currency" htmlFor="cur" hint="Contributors will see an approximate local value alongside USDC.">
-              <Select id="cur" value={targetCurrency} onChange={(e) => setTargetCurrency(e.target.value)}>
-                <option value="">None</option>
-                {CURRENCIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </Select>
-            </Field>
+            {localPreview && (
+              <p className="-mt-2 font-dm-mono text-sm text-char">Contributors will see ≈ {localPreview}</p>
+            )}
           </div>
         )}
 
-        {/* Step 2 — Details */}
+        {/* Step 2 — Terms */}
         {step === 1 && (
-          <div className="animate-fade-in-still flex flex-col gap-5">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-navy">Where and when</h2>
-              <p className="mt-1 text-sm text-muted">Choose who receives the funds and how they&apos;re released.</p>
-            </div>
-            <Field label="Recipient" htmlFor="recipient" hint="Leave blank to send the funds to your own wallet.">
-              <Input id="recipient" placeholder="Recipient wallet address (optional)" value={recipientWalletAddress} onChange={(e) => setRecipientWalletAddress(e.target.value)} className="tnum" />
-            </Field>
-            <div>
-              <p className="text-sm font-medium text-ink">How long should it stay open?</p>
-              <p className="mt-0.5 text-xs text-muted">Contributions close after this. Uses your local time — no timezone guessing.</p>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {DURATIONS.map((d) => {
-                  const active = durationKey === d.key;
-                  return (
-                    <button
-                      type="button"
-                      key={d.key}
-                      onClick={() => setDurationKey(d.key)}
-                      className={`rounded-[12px] border px-3 py-2.5 text-sm font-medium transition-all ${
-                        active
-                          ? "border-brand bg-brand-50 text-brand-600"
-                          : "border-line bg-surface text-ink hover:border-line-strong"
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                  );
-                })}
+          <div className="animate-fade-in-still flex flex-col gap-8">
+            <h2 className={CARD_TITLE}>Where and when?</h2>
+            <FieldShell label="Recipient" htmlFor="recipient" hint="Leave blank to send the funds to your own wallet.">
+              <InputField id="recipient" placeholder="Recipient wallet address (optional)" value={recipientWalletAddress} onChange={(e) => setRecipientWalletAddress(e.target.value)} className="font-dm-mono" />
+            </FieldShell>
+
+            <fieldset>
+              <legend className="text-[15px] font-medium">How long should it stay open?</legend>
+              <p className="text-sm text-char">Contributions close after this. Uses your local time.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {DURATIONS.map((d) => (
+                  <TagButton key={d.key} selected={durationKey === d.key} onClick={() => setDurationKey(d.key)}>
+                    {d.label}
+                  </TagButton>
+                ))}
               </div>
               {durationKey === "custom" ? (
-                <Input
+                <InputField
                   type="datetime-local"
+                  aria-label="Custom deadline"
                   value={customDeadline}
                   onChange={(e) => setCustomDeadline(e.target.value)}
-                  className="mt-2.5"
+                  className="mt-4"
                 />
               ) : (
-                <p className="mt-2.5 text-sm text-muted">
-                  Closes <span className="font-medium text-ink">{formatDateTime(computeDeadlineIso())}</span>
+                <p className="mt-4 text-sm text-char">
+                  Closes <span className="font-dm-mono text-ink-black">{formatDateTime(computeDeadlineIso())}</span>
                 </p>
               )}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-ink">Release condition</p>
-              <div className="mt-2 flex flex-col gap-2.5">
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-[15px] font-medium">Release condition</legend>
+              <div className="mt-3 flex flex-col gap-3">
                 {RELEASE_MODES.map((m) => {
                   const active = releaseMode === m.key;
                   return (
                     <button
                       type="button"
                       key={m.key}
+                      aria-pressed={active}
                       onClick={() => setReleaseMode(m.key)}
-                      className={`flex items-start gap-3 rounded-[14px] border p-4 text-left transition-all ${
-                        active ? "border-brand bg-brand-50/50 ring-4 ring-brand/10" : "border-line bg-surface hover:border-line-strong"
+                      className={`rounded-2xl border-[1.5px] p-5 text-left transition-colors ${
+                        active ? "border-ink-black bg-buttercream" : "border-oat bg-bone-white hover:border-ink-black"
                       }`}
                     >
-                      <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${active ? "border-brand" : "border-line-strong"}`}>
-                        {active && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="text-body font-medium">{m.title}</span>
+                        <span
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[1.5px] ${active ? "border-ink-black" : "border-oat"}`}
+                          aria-hidden
+                        >
+                          {active && <span className="h-2.5 w-2.5 rounded-full bg-ink-black" />}
+                        </span>
                       </span>
-                      <span>
-                        <span className="block text-[15px] font-semibold text-ink">{m.title}</span>
-                        <span className="mt-0.5 block text-sm text-muted">{m.body}</span>
-                      </span>
+                      <span className="mt-1 block text-sm text-char">{m.body}</span>
                     </button>
                   );
                 })}
               </div>
-            </div>
+            </fieldset>
           </div>
         )}
 
         {/* Step 3 — Review */}
         {step === 2 && (
           <div className="animate-fade-in-still">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-navy">Review your pool</h2>
-              <p className="mt-1 text-sm text-muted">Check the details before it goes live.</p>
-            </div>
-            <dl className="mt-5 divide-y divide-line rounded-[16px] border border-line bg-surface">
+            <h2 className={CARD_TITLE}>Review your pool</h2>
+            <p className="mt-3 text-body text-char">Check the details before it goes live.</p>
+            <dl className="mt-8 border-t border-ink-black">
               {[
                 ["Name", title],
                 ["Description", description || "—"],
-                ["Target", `$${formatUsdc(targetAmount)} USDC${targetCurrency && fxRate !== null ? ` · ≈ ${formatLocal(Number(targetAmount) * fxRate, targetCurrency)}` : ""}`],
+                ["Target", `$${formatUsdc(targetAmount)} USDC${localPreview ? ` · ≈ ${localPreview}` : ""}`],
                 ["Recipient", recipientWalletAddress || "Your own wallet"],
                 ["Deadline", computeDeadlineIso() ? formatDateTime(computeDeadlineIso()) : "—"],
                 ["Release", RELEASE_MODES.find((m) => m.key === releaseMode)?.title ?? ""],
               ].map(([k, v]) => (
-                <div key={k} className="flex items-start justify-between gap-4 px-4 py-3.5">
-                  <dt className="text-sm text-muted">{k}</dt>
-                  <dd className="max-w-[60%] break-words text-right text-sm font-medium text-ink">{v}</dd>
+                <div key={k} className="flex items-start justify-between gap-4 border-b border-dashed border-oat py-4">
+                  <dt className="text-char">{k}</dt>
+                  <dd className="max-w-[65%] break-words text-right font-medium">{v}</dd>
                 </div>
               ))}
             </dl>
-            <p className="mt-4 rounded-[12px] bg-surface-2 px-4 py-3 text-xs leading-relaxed text-muted">
+            <p className="mt-6 text-sm text-char">
               Creating a pool deploys it to escrow on-chain. This takes a few seconds and no gas fee for you.
             </p>
-            {status === "error" && (
-              <p className="mt-3 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger">{errorMessage}</p>
-            )}
+            {status === "error" && <FormMessage className="mt-5">{errorMessage}</FormMessage>}
           </div>
         )}
-      </div>
+      </SurfaceCard>
 
-      {/* Nav */}
-      <div className="mt-8 flex items-center justify-between gap-3">
-        {step === 0 ? (
-          <Link href="/dashboard" className="text-sm font-medium text-muted hover:text-ink">Cancel</Link>
+      {/* Footer — outlined Back on the left, Marigold forward on the right */}
+      <div className="mt-6 flex items-center justify-between gap-3">
+        {step > 0 ? (
+          <PillButton variant="outlined" onClick={() => setStep((s) => s - 1)} disabled={status === "working"}>
+            Back
+          </PillButton>
         ) : (
-          <Button variant="ghost" onClick={() => setStep((s) => s - 1)} disabled={status === "working"}>Back</Button>
+          <span />
         )}
 
         {step < 2 ? (
-          <Button
+          <PillButton
+            className="!border-ink-black"
             onClick={() => setStep((s) => s + 1)}
             disabled={(step === 0 && !step1Valid) || (step === 1 && !step2Valid)}
-            size="lg"
           >
             Continue
-          </Button>
+          </PillButton>
         ) : (
-          <Button onClick={handleSubmit} disabled={status === "working"} size="lg">
+          <PillButton className="!border-ink-black" onClick={handleSubmit} disabled={status === "working"}>
             {status === "working" ? "Creating pool…" : "Create pool"}
-          </Button>
+          </PillButton>
         )}
       </div>
     </div>
@@ -369,9 +372,10 @@ export function CreatePoolForm() {
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <Button
-      variant="secondary"
-      size="sm"
+    <PillButton
+      variant="black"
+      compact
+      className="shrink-0"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text);
@@ -381,6 +385,6 @@ function CopyButton({ text }: { text: string }) {
       }}
     >
       {copied ? "Copied" : "Copy link"}
-    </Button>
+    </PillButton>
   );
 }

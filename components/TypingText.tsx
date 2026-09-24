@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 
 // Rotating typewriter: types a phrase, holds, erases, types the next.
 // Falls back to static first phrase when the user prefers reduced motion.
@@ -20,15 +21,7 @@ export function TypingText({
   const [wordIndex, setWordIndex] = useState(0);
   const [len, setLen] = useState(0);
   const [erasing, setErasing] = useState(false);
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     if (reduced) return;

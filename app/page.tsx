@@ -1,37 +1,43 @@
-import Link from "next/link";
 import { getSessionUserId } from "@/lib/session";
-import { Gem, GraduationCap, HandHeart, Building2, Handshake, Globe } from "lucide-react";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { HeroMockup } from "@/components/marketing/HeroMockup";
-import { ButtonLink } from "@/components/ui/Button";
+import { PullTogetherBand } from "@/components/marketing/PullTogetherBand";
 import { TypingText } from "@/components/TypingText";
+import { Hero } from "@/components/design/Hero";
+import { Section, SectionHeader } from "@/components/design/Section";
+import { FeatureGrid, type Feature } from "@/components/design/FeatureGrid";
+import { PillLink } from "@/components/design/PillButton";
 
-const USE_CASES = [
-  { Icon: Gem, title: "Weddings", body: "Collect from family and friends toward the celebration." },
-  { Icon: GraduationCap, title: "School fees", body: "Rally a community to keep a student in class." },
-  { Icon: HandHeart, title: "Family support", body: "Come together quickly when someone needs help." },
-  { Icon: Building2, title: "Community projects", body: "Fund the borehole, the clinic, the church roof." },
-  { Icon: Handshake, title: "Cooperatives", body: "Run a transparent savings circle with clear rules." },
-  { Icon: Globe, title: "Diaspora giving", body: "Send home together, with everyone able to see the total." },
+// Hero photography (DESIGN.md › Imagery): warm, documentary-style — linked
+// hands, "all pull together". Sits under the warm dark scrim.
+const HERO_IMAGE = "/hero.jpg";
+
+const STEPS: Feature[] = [
+  {
+    marker: "01",
+    title: "Create a pool",
+    body: "Name the goal, set a target and a deadline. No bank forms, no crypto jargon.",
+  },
+  {
+    marker: "02",
+    title: "Share one link",
+    body: "Anyone can chip in with a passkey — Face ID or fingerprint. Nothing to download, no seed phrase.",
+  },
+  {
+    marker: "03",
+    title: "Release or refund",
+    body: "Money waits in escrow until the pool’s rules are met, then releases to the recipient — or goes back to everyone.",
+  },
 ];
 
-const STEPS = [
-  {
-    n: "1",
-    title: "Create a pool",
-    body: "Name your goal, set a target and a deadline. It takes about a minute — no bank forms, no crypto jargon.",
-  },
-  {
-    n: "2",
-    title: "Invite contributors",
-    body: "Share one link. Anyone can chip in with a passkey — no app to download, no seed phrases to write down.",
-  },
-  {
-    n: "3",
-    title: "Funds release or refund",
-    body: "Money stays in escrow until the pool's rules are met. Then it releases to the recipient automatically — or, if the pool is set to refund, everyone can take their money back.",
-  },
+const USE_CASES = [
+  { title: "Weddings", body: "Collect from family and friends toward the celebration." },
+  { title: "School fees", body: "Rally a community to keep a student in class." },
+  { title: "Family support", body: "Come together quickly when someone needs help." },
+  { title: "Community projects", body: "Fund the borehole, the clinic, the church roof." },
+  { title: "Cooperatives", body: "Run a transparent savings circle with clear rules." },
+  { title: "Diaspora giving", body: "Send home together, with everyone able to see the total." },
 ];
 
 const FAQ = [
@@ -44,7 +50,7 @@ const FAQ = [
     a: "No. You sign in with a passkey — the same Face ID or fingerprint you already use. Balances are shown in plain dollars. The blockchain is just the plumbing; you never touch it.",
   },
   {
-    q: "What happens if we don't reach the goal?",
+    q: "What if we don’t reach the goal?",
     a: "That depends on the rule the organizer chose when creating the pool. With “only when target is reached”, every contributor can claim back exactly what they put in. With the other rules, whatever was raised goes to the recipient at the deadline.",
   },
   {
@@ -55,147 +61,128 @@ const FAQ = [
 
 export default async function Home() {
   const isLoggedIn = !!(await getSessionUserId());
+  const startHref = isLoggedIn ? "/pools/new" : "/register";
 
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader isLoggedIn={isLoggedIn} />
 
       <main className="flex-1">
-        {/* Hero */}
-        <section className="relative overflow-hidden">
-          <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:pb-24 lg:pt-20">
-            <div className="animate-fade-in">
-              <h1 className="text-[40px] font-bold leading-[1.05] tracking-[-0.02em] text-navy sm:text-[56px]">
-                Pool together.
-                <br />
-                Give together.
-                <br />
-                <TypingText
-                  words={["Achieve together.", "Celebrate together."]}
-                  className="text-brand"
-                />
-              </h1>
-              <p className="mt-5 max-w-md text-lg leading-relaxed text-muted">
-                Harambee is the calm, trustworthy way for groups to collect money toward a shared goal — held safely in escrow, then released or refunded by the rules you set.
+        <Hero
+          image={HERO_IMAGE}
+          headline={
+            <>
+              Pool together.
+              <br />
+              Give together.
+              <br />
+              <TypingText words={["Achieve together.", "Celebrate together."]} />
+            </>
+          }
+          subtext="Harambee is the calm, trustworthy way for groups to collect money toward a shared goal — held safely in escrow, then released or refunded by the rules you set."
+          actions={<PillLink href={startHref}>Start a pool</PillLink>}
+        />
+
+        {/* "all pull together" — the meaning of Harambee, as a band */}
+        <PullTogetherBand />
+
+        {/* How it works */}
+        <Section id="how">
+          <p className="type-eyebrow">How it works</p>
+          <h2 className="type-heading-lg mt-3 max-w-[640px]">Three steps. About a minute.</h2>
+          <FeatureGrid items={STEPS} className="mt-14" />
+        </Section>
+
+        {/* Product preview — UI mockup as a white card inset in cream */}
+        <Section>
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <h2 className="type-heading-lg">Everyone sees the same ledger</h2>
+              <p className="type-subheading mt-5 max-w-lg opacity-80">
+                Every contribution is recorded on-chain and shown to the whole group — the total, the
+                contributors, and exactly when the pool releases.
               </p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <ButtonLink href={isLoggedIn ? "/pools/new" : "/register"} size="lg" variant="coral">
-                  Start a pool
-                </ButtonLink>
-                <ButtonLink href="#how" size="lg" variant="secondary">
-                  See how it works
-                </ButtonLink>
+              <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+                <PillLink href={startHref}>Start a pool</PillLink>
+                <PillLink href="/docs" variant="outlined">
+                  Read the docs
+                </PillLink>
               </div>
             </div>
-
-            <div className="animate-scale-in lg:pl-8">
-              <HeroMockup />
-            </div>
+            <HeroMockup />
           </div>
-        </section>
+        </Section>
 
-        {/* How it works — navy */}
-        <section id="how" className="scroll-mt-20 bg-navy">
-          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-            <div className="max-w-2xl">
-              <p className="text-sm font-semibold text-brand">How it works</p>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                Three steps, about a minute
-              </h2>
-              <p className="mt-3 text-lg text-white/70">
-                As simple as sending a transfer. The complicated parts happen quietly in the background.
+        {/* Use cases — ink section: statement left, numbered ledger right */}
+        <Section id="use-cases" ink className="!pt-24">
+          <div className="grid gap-14 lg:grid-cols-2 lg:gap-16">
+            <div className="lg:sticky lg:top-24 lg:self-start">
+              <p className="type-eyebrow">Use cases</p>
+              <h2 className="type-heading-lg mt-3">Whatever you’re raising for.</h2>
+              <p className="mt-6 max-w-md text-body text-bone-white/85">
+                From weddings to school fees to keeping a cooperative honest — one place to gather funds
+                where everyone can see the total.
               </p>
+              <PillLink href={startHref} variant="outlined-light" compact className="mt-8">
+                Start yours
+              </PillLink>
             </div>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {STEPS.map((s) => (
-                <div key={s.n} className="rounded-[18px] border border-line bg-white p-6 shadow-lg">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-navy text-base font-bold text-white">
-                    {s.n}
-                  </span>
-                  <h3 className="mt-5 text-lg font-semibold text-ink">{s.title}</h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-muted">{s.body}</p>
-                </div>
+            <ol className="border-t border-bone-white/25">
+              {USE_CASES.map((u, i) => (
+                <li key={u.title} className="flex gap-8 border-b border-bone-white/25 py-7">
+                  <span className="pt-1.5 font-dm-mono text-sm text-bone-white/70">0{i + 1}</span>
+                  <div>
+                    <h3 className="font-champ text-[24px] font-bold leading-tight">{u.title}</h3>
+                    <p className="mt-1.5 text-body text-bone-white/75">{u.body}</p>
+                  </div>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
-        </section>
+        </Section>
 
-        {/* Use cases — white */}
-        <section id="use-cases" className="scroll-mt-20 bg-white">
-          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-            <div className="max-w-2xl">
-              <p className="text-sm font-semibold text-brand-600">Use cases</p>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-navy sm:text-4xl">
-                Whatever you&apos;re raising for
-              </h2>
-              <p className="mt-3 text-lg text-muted">
-                Harambee means &ldquo;all pull together.&rdquo; From weddings to school fees to keeping a
-                cooperative honest — one place to gather funds transparently.
-              </p>
-            </div>
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {USE_CASES.map((u) => (
-                <div
-                  key={u.title}
-                  className="group rounded-[18px] bg-brand-strong p-6 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-lg"
-                >
-                  <span className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-white/15 text-white transition-colors group-hover:bg-navy/10 group-hover:text-navy">
-                    <u.Icon size={24} strokeWidth={1.75} />
-                  </span>
-                  <h3 className="mt-4 text-lg font-semibold text-white group-hover:text-navy">{u.title}</h3>
-                  <p className="mt-1.5 text-[15px] leading-relaxed text-white/90 group-hover:text-navy/75">{u.body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ — coral */}
-        <section id="faq" className="scroll-mt-20 bg-brand-strong">
-          <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
-            <div className="text-center">
-              <p className="text-sm font-semibold text-white/80">FAQ</p>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                Questions people ask first
-              </h2>
-            </div>
-            <div className="mt-10 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+        {/* FAQ — a centered, ruled column */}
+        <Section id="faq" className="!py-24" innerClassName="max-w-[880px]">
+          <h2 className="type-heading-lg">Questions people ask first</h2>
+          <div className="mt-10 border-t border-ink-black">
             {FAQ.map((item) => (
-              <details key={item.q} className="group px-6">
-                <summary className="flex cursor-pointer list-none items-center justify-between py-5 text-[16px] font-semibold text-ink [&::-webkit-details-marker]:hidden">
-                  {item.q}
-                  <span className="ml-4 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted transition-transform group-open:rotate-45">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                      <path d="M12 5v14M5 12h14" />
-                    </svg>
-                  </span>
+              <details key={item.q} className="group border-b border-ink-black">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-7 [&::-webkit-details-marker]:hidden">
+                  <span className="font-champ text-[21px] font-bold leading-snug">{item.q}</span>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    aria-hidden
+                    className="shrink-0 transition-transform duration-200 group-open:rotate-45"
+                  >
+                    <path d="M12 4v16M4 12h16" />
+                  </svg>
                 </summary>
-                  <p className="pb-5 pr-10 text-[15px] leading-relaxed text-muted">{item.a}</p>
-                </details>
-              ))}
-            </div>
+                <p className="max-w-[680px] pb-7 text-body text-ink-black/80">{item.a}</p>
+              </details>
+            ))}
           </div>
-        </section>
+        </Section>
 
-        {/* CTA — white section, navy card */}
-        <section className="px-4 pb-20 pt-20 sm:px-6">
-          <div className="mx-auto max-w-6xl overflow-hidden rounded-[28px] bg-navy px-6 py-16 text-center sm:px-12">
-            <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Start pooling toward what matters
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-white/70">
-              Create your first pool in about a minute. No downloads, no gas fees, no jargon.
-            </p>
-            <div className="mt-8 flex justify-center">
-              <Link
-                href={isLoggedIn ? "/pools/new" : "/register"}
-                className="inline-flex h-13 min-h-[52px] items-center rounded-none bg-brand-strong px-7 text-base font-semibold text-white shadow-md transition-all hover:-translate-y-px hover:brightness-95 hover:shadow-lg"
-              >
-                Start a pool
-              </Link>
-            </div>
+        {/* Closing CTA — Marigold paired with an outlined black pill */}
+        <Section>
+          <SectionHeader
+            align="center"
+            title="Start pooling toward what matters"
+            lead="Create your first pool in about a minute. No downloads, no gas fees, no jargon."
+          />
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <PillLink href={startHref}>Start a pool</PillLink>
+            <PillLink href="#how" variant="outlined">
+              See how it works
+            </PillLink>
           </div>
-        </section>
+        </Section>
       </main>
 
       <SiteFooter />
