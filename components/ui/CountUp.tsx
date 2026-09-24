@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 
 /** Counts up to `value` once on mount / when value increases. Respects reduced-motion. */
 export function CountUp({
@@ -18,16 +19,15 @@ export function CountUp({
   duration?: number;
   className?: string;
 }) {
+  const reduce = useReducedMotion();
   const [display, setDisplay] = useState(0);
   const fromRef = useRef(0);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const reduce =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    // Reduced motion renders `value` directly (below); just keep the start
+    // point in sync so re-enabling motion animates from the right place.
     if (reduce) {
-      setDisplay(value);
       fromRef.current = value;
       return;
     }
@@ -44,9 +44,9 @@ export function CountUp({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [value, duration]);
+  }, [value, duration, reduce]);
 
-  const text = display.toLocaleString("en-US", {
+  const text = (reduce ? value : display).toLocaleString("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });

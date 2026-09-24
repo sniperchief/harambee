@@ -1,27 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { registerPasskey } from "@/lib/modularWallet";
 import { friendlyPasskeyError } from "@/lib/authErrors";
 import { AuthLayout } from "@/components/auth/AuthLayout";
-import { Button } from "@/components/ui/Button";
-import { Field, Input } from "@/components/ui/Field";
-
-function FingerprintIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
-      <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
-      <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
-      <path d="M2 12a10 10 0 0 1 18-6" />
-      <path d="M2 16h.01M21.8 16c.2-2 .131-5.354 0-6" />
-      <path d="M8.65 22c.21-.66.45-1.32.57-2" />
-      <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
-    </svg>
-  );
-}
+import { PillButton, PillLink } from "@/components/design/PillButton";
+import { FieldShell, InputField, FormMessage } from "@/components/design/InputField";
 
 function RegisterForm() {
   const router = useRouter();
@@ -73,23 +58,29 @@ function RegisterForm() {
   }
 
   return (
-    <AuthLayout>
-      <div className="mb-8">
-        <h1 className="text-[28px] font-bold tracking-tight text-navy">Create your account</h1>
-        <p className="mt-2 text-[15px] text-muted">
-          A passkey and a name — that&apos;s all it takes. Your wallet is created for you.
-        </p>
-      </div>
-
-      <form onSubmit={handleRegister} className="flex flex-col gap-5">
-        <Field
+    <AuthLayout
+      eyebrow="Get started"
+      title="Create account"
+      lead="A passkey and a name — that’s all it takes. Your wallet is created for you."
+      after={
+        <>
+          {errorMsg && <FormMessage className="mt-6">{errorMsg}</FormMessage>}
+          <p className="mt-6 text-center text-sm text-char">
+            By continuing you agree that funds are held in smart-contract escrow and released only when a pool&apos;s conditions are met.
+          </p>
+        </>
+      }
+    >
+      <form onSubmit={handleRegister} className="flex flex-col gap-4">
+        <FieldShell
           label="Choose a username"
           htmlFor="username"
           hint="5–15 characters. Letters and numbers work best."
           error={usernameError}
         >
-          <Input
+          <InputField
             id="username"
+            aria-invalid={!!usernameError}
             type="text"
             placeholder="e.g. amara_o"
             value={username}
@@ -101,29 +92,22 @@ function RegisterForm() {
             autoCapitalize="none"
             spellCheck={false}
           />
-        </Field>
+        </FieldShell>
 
-        <Button type="submit" size="lg" disabled={!usernameValid || status === "working"}>
-          <FingerprintIcon />
+        <PillButton
+          type="submit"
+          disabled={!usernameValid || status === "working"}
+          block
+          className="mt-2 !border-ink-black"
+        >
           {status === "working" ? "Creating your passkey…" : "Continue with passkey"}
-        </Button>
-
-        {errorMsg && (
-          <p className="rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger">
-            {errorMsg}
-          </p>
-        )}
+        </PillButton>
+        <PillLink href={`/login?next=${encodeURIComponent(next)}`} variant="outlined" block>
+          I already have an account
+        </PillLink>
       </form>
-
-      <p className="mt-6 text-center text-sm text-muted">
-        Already have an account?{" "}
-        <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-semibold text-brand hover:underline">
-          Sign in
-        </Link>
-      </p>
-
-      <p className="mt-8 text-center text-xs leading-relaxed text-muted">
-        By continuing you agree that funds are held in smart-contract escrow and released only when a pool&apos;s conditions are met.
+      <p className="mt-6 text-center text-sm text-char">
+        No passwords. No seed phrases. Nothing leaves your device.
       </p>
     </AuthLayout>
   );

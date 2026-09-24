@@ -1,30 +1,38 @@
-// Instant skeleton shown while an authed page's data loads. Keeping a nav-like
-// bar means the header doesn't vanish during navigation — the click feels
-// immediate instead of dead.
+// Instant skeleton shown while an authed page's data loads. It mirrors the app
+// nav (logo + links on the left, account chip on the right) and the dashboard
+// layout, so a click feels immediate instead of dead.
 export function AppLoading() {
   return (
-    <div className="min-h-screen bg-canvas">
-      <header className="sticky top-0 z-40 bg-white">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-8">
-            <div className="skeleton h-7 w-28 rounded-md" />
-            <div className="hidden items-center gap-3 md:flex">
-              <div className="skeleton h-4 w-16 rounded" />
-              <div className="skeleton h-4 w-14 rounded" />
-              <div className="skeleton h-4 w-16 rounded" />
-            </div>
+    <div className="min-h-screen">
+      <header className="nav-bar nav-bar--left">
+        <div className="nav-bar__inner">
+          <div className="skeleton h-8 w-36 rounded-full" />
+          <div className="hidden items-center gap-2 min-[900px]:flex">
+            <div className="skeleton h-10 w-28 rounded-full" />
+            <div className="skeleton h-10 w-20 rounded-full" />
           </div>
-          <div className="skeleton h-8 w-28 rounded-full" />
+          <div className="flex justify-end">
+            <div className="skeleton h-11 w-40 rounded-full" />
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
-        <div className="skeleton h-9 w-44 rounded-md" />
-        <div className="skeleton mt-6 h-24 w-full rounded-[18px]" />
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="skeleton h-44 rounded-[18px]" />
-          ))}
+      <main className="section !pt-14">
+        <div className="section__inner">
+          <div className="skeleton h-4 w-44 rounded-full" />
+          <div className="skeleton mt-4 h-[72px] w-80 max-w-full rounded-2xl" />
+          <div className="skeleton mt-8 h-[218px] rounded-[20px]" />
+          <div className="mt-10 grid gap-8 lg:grid-cols-3">
+            <div className="space-y-8 lg:col-span-2">
+              <div className="grid gap-4 sm:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="skeleton h-36 rounded-[20px]" />
+                ))}
+              </div>
+              <div className="skeleton h-72 rounded-[20px]" />
+            </div>
+            <div className="skeleton h-96 rounded-[20px]" />
+          </div>
         </div>
       </main>
     </div>

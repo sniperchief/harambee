@@ -32,23 +32,22 @@ function loadRates(): Promise<Record<string, number>> {
 // or if the currency is unknown — callers hide the converted figure on null so
 // an unconverted number is never shown.
 export function useFxRate(code: string | null | undefined): number | null {
-  const [rate, setRate] = useState<number | null>(code === "USD" ? 1 : null);
+  // The last lookup, tagged with its currency so a stale rate is never shown
+  // for a different code while the new one loads.
+  const [fetched, setFetched] = useState<{ code: string; rate: number | null } | null>(null);
 
   useEffect(() => {
-    if (!code) return;
-    if (code === "USD") {
-      setRate(1);
-      return;
-    }
+    if (!code || code === "USD") return;
     let active = true;
-    setRate(null);
     loadRates().then((rates) => {
-      if (active) setRate(rates[code] ?? null);
+      if (active) setFetched({ code, rate: rates[code] ?? null });
     });
     return () => {
       active = false;
     };
   }, [code]);
 
-  return rate;
+  if (!code) return null;
+  if (code === "USD") return 1;
+  return fetched?.code === code ? fetched.rate : null;
 }

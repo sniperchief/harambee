@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TopNav } from "@/components/TopNav";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { Section } from "@/components/design/Section";
+import { SurfaceCard, WarmCard } from "@/components/design/Card";
+import { Tag } from "@/components/design/Tag";
 import { getSessionUser, displayName } from "@/lib/session";
 import { createServiceClient } from "@/lib/supabase";
-import { formatUsdc, formatDate, timeAgo, statusMeta, type PoolStatus } from "@/lib/format";
+import { formatUsdc, formatDate, timeAgo, type PoolStatus } from "@/lib/format";
 
 type EventType = "contribution" | "release" | "refund" | "created";
 
@@ -18,31 +18,13 @@ type TimelineEvent = {
   at: string;
 };
 
-const ICONS: Record<EventType, { bg: string; fg: string; path: React.ReactNode; verb: string }> = {
-  contribution: {
-    bg: "bg-brand-50",
-    fg: "text-brand-600",
-    verb: "Contribution to",
-    path: <path d="M12 5v14M5 12l7 7 7-7" />,
-  },
-  release: {
-    bg: "bg-success-50",
-    fg: "text-success",
-    verb: "Funds released for",
-    path: <path d="M20 6 9 17l-5-5" />,
-  },
-  refund: {
-    bg: "bg-warning-50",
-    fg: "text-[#b45309]",
-    verb: "Refund available for",
-    path: <path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.74 2.74L3 8M3 3v5h5" />,
-  },
-  created: {
-    bg: "bg-surface-2",
-    fg: "text-muted",
-    verb: "You created",
-    path: <path d="M12 5v14M5 12h14" />,
-  },
+// Outcomes read as Tags, in the same tones as the Pools table
+// (see poolDisplay): Released in cream, Refunded in white.
+const EVENTS: Record<EventType, { verb: string; tag?: { label: string; tone: "cream" | "white" } }> = {
+  contribution: { verb: "Contribution to" },
+  release: { verb: "Funds released for", tag: { label: "Released", tone: "cream" } },
+  refund: { verb: "Refund available for", tag: { label: "Refunded", tone: "white" } },
+  created: { verb: "You created" },
 };
 
 export default async function ActivityPage() {
@@ -93,52 +75,61 @@ export default async function ActivityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-screen">
       <TopNav walletAddress={user.modular_wallet_address} name={displayName(user)} />
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:py-10">
-        <h1 className="text-3xl font-bold tracking-tight text-navy">Activity</h1>
-        <p className="mt-1 text-[15px] text-muted">Every contribution, release and refund across your pools.</p>
+      <main>
+        <Section className="!pt-14" innerClassName="max-w-[880px]">
+          <p className="type-eyebrow">Your ledger</p>
+          <h1 className="type-display mt-3">Activity</h1>
+          <p className="mt-4 text-body text-char">Every contribution, release and refund across your pools.</p>
 
-        <div className="mt-8">
-          {events.length === 0 ? (
-            <EmptyState
-              title="No activity yet"
-              description="Once you create or contribute to a pool, the history shows up here."
-            />
-          ) : (
-            <div className="space-y-8">
-              {Array.from(groups.entries()).map(([day, items]) => (
-                <div key={day}>
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">{day}</p>
-                  <Card className="divide-y divide-line">
-                    {items.map((e, i) => {
-                      const ic = ICONS[e.type];
-                      const meta = statusMeta((e.type === "release" ? "released" : e.type === "refund" ? "refunded" : "open") as PoolStatus);
-                      return (
-                        <Link key={i} href={`/pools/${e.poolId}`} className="flex items-center gap-3.5 px-5 py-4 transition-colors hover:bg-surface-2/60">
-                          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ic.bg} ${ic.fg}`}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{ic.path}</svg>
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm text-ink">
-                              <span className="text-muted">{ic.verb}</span> <span className="font-semibold">{e.poolTitle}</span>
-                            </p>
-                            <p className="text-xs text-muted">{timeAgo(e.at)}</p>
-                          </div>
-                          {e.amount ? (
-                            <span className="text-sm font-semibold text-ink tnum">+${formatUsdc(e.amount)}</span>
-                          ) : e.type !== "created" ? (
-                            <Badge tone={meta.tone}>{meta.label}</Badge>
-                          ) : null}
-                        </Link>
-                      );
-                    })}
-                  </Card>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+          <div className="mt-12">
+            {events.length === 0 ? (
+              <WarmCard className="flex flex-col items-center py-20 text-center">
+                <h3 className="type-heading-sm">No activity yet</h3>
+                <p className="mt-3 max-w-sm text-body text-char">
+                  Once you create or contribute to a pool, the history shows up here.
+                </p>
+              </WarmCard>
+            ) : (
+              <div className="space-y-12">
+                {Array.from(groups.entries()).map(([day, items]) => (
+                  <div key={day}>
+                    <p className="mb-4 font-dm-mono text-sm text-char">{day}</p>
+                    <SurfaceCard flush className="px-8">
+                      <ul>
+                        {items.map((e, i) => {
+                          const ev = EVENTS[e.type];
+                          return (
+                            <li key={i} className="ledger-row">
+                              <Link
+                                href={`/pools/${e.poolId}`}
+                                className="flex items-center justify-between gap-4 py-5 no-underline hover:underline hover:underline-offset-4"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block truncate text-body">
+                                    <span className="text-char">{ev.verb}</span>{" "}
+                                    <span className="font-medium">{e.poolTitle}</span>
+                                  </span>
+                                  <span className="text-sm text-char">{timeAgo(e.at)}</span>
+                                </span>
+                                {e.amount ? (
+                                  <span className="font-dm-mono text-lg tnum">+${formatUsdc(e.amount)}</span>
+                                ) : ev.tag ? (
+                                  <Tag tone={ev.tag.tone} small>{ev.tag.label}</Tag>
+                                ) : null}
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </SurfaceCard>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Section>
       </main>
     </div>
   );

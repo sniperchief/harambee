@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { Progress } from "@/components/ui/Progress";
-import { Card } from "@/components/ui/Card";
-import { Avatar } from "@/components/ui/Avatar";
-import { AmountInput } from "@/components/ui/Field";
+import { PillButton, PillLink } from "@/components/design/PillButton";
+import { SurfaceCard, WarmCard } from "@/components/design/Card";
+import { Tag, TagButton } from "@/components/design/Tag";
+import { Meter } from "@/components/design/Meter";
+import { poolDisplay } from "@/components/PoolTable";
+import { AmountField, FormMessage } from "@/components/design/InputField";
 import { CountUp } from "@/components/ui/CountUp";
 import { contributeWithPasskey, refundWithPasskey } from "@/lib/poolContribute";
 import { useWalletBalance } from "@/lib/useWalletBalance";
@@ -225,304 +225,258 @@ export function PoolDetail({
   const canContribute = statusOpen && !contributionsClosed; // genuinely open right now
   const endedByDeadline = statusOpen && contributionsClosed; // "open" in DB but past the (buffered) deadline
   const showLiveOpen = canContribute; // drives the "Open" badge
-  const badgeLabel = endedByDeadline ? "Ended" : status.label;
-  const badgeTone = endedByDeadline ? "muted" : status.tone;
+  const display = poolDisplay(state.status, pool.deadline, endedByDeadline);
   const insufficient = balance !== null && !!amount && Number(amount) > Number(balance);
   const refundClaimed = viewerClaimed || refundStatus === "done";
 
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <Badge tone={badgeTone} dot={showLiveOpen}>{badgeLabel}</Badge>
-          </div>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-navy sm:text-[34px]">{pool.title}</h1>
-          {pool.description && <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-muted">{pool.description}</p>}
-        </div>
-      </div>
+      <Tag tone={display.tone}>{display.label}</Tag>
+      <h1 className="type-heading-lg mt-6 max-w-4xl [overflow-wrap:anywhere]">{pool.title}</h1>
+      {pool.description && <p className="type-subheading mt-5 max-w-2xl opacity-80">{pool.description}</p>}
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Progress hero — first on mobile, top-left on desktop */}
+      <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Progress — first on mobile, top-left on desktop */}
         <div className="order-1 lg:order-none lg:col-span-2 lg:col-start-1 lg:row-start-1">
-          <Card className="p-6 sm:p-7">
-            <div className="flex items-end justify-between gap-4">
+          <SurfaceCard>
+            <div className="flex flex-wrap items-end justify-between gap-6">
               <div>
-                <p className="text-sm font-medium text-muted">Raised so far</p>
-                <p className="mt-1 text-4xl font-bold tracking-tight text-navy sm:text-5xl">
+                <p className="stat-callout__value">
                   <CountUp value={current} prefix="$" />
                 </p>
-                {pool.target_currency && fxRate !== null && (
-                  <p className="mt-1 text-sm text-muted tnum">
-                    ≈ {formatLocal(Number(current) * fxRate, pool.target_currency)}
-                  </p>
-                )}
+                <p className="stat-callout__label mt-2">
+                  raised so far
+                  {pool.target_currency && fxRate !== null && (
+                    <span className="font-dm-mono text-char"> · ≈ {formatLocal(Number(current) * fxRate, pool.target_currency)}</span>
+                  )}
+                </p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-semibold text-ink tnum">{Math.round(pct)}%</p>
-                <p className="text-sm text-muted tnum">of ${formatUsdc(target)}</p>
+                <p className="type-heading-sm tnum">{Math.round(pct)}%</p>
+                <p className="font-dm-mono text-sm text-char">of ${formatUsdc(target)}</p>
               </div>
             </div>
-            <Progress value={pct} tone={state.status === "released" ? "success" : "brand"} size="lg" className="mt-5" />
+            <Meter value={pct} tone={display.meter} className="mt-8" label={`${Math.round(pct)}% funded`} />
 
-            <div className="mt-6 grid grid-cols-3 gap-2">
-              <div className="rounded-[12px] bg-navy px-2 py-3.5 text-center">
-                <p className="text-xs font-medium text-white/60">Contributors</p>
-                <p className="mt-1 text-sm font-semibold text-white tnum">{contributorCount}</p>
+            <WarmCard className="mt-8 grid grid-cols-1 gap-5 !p-6 sm:grid-cols-3 sm:gap-4">
+              <div>
+                <p className="text-sm text-char">Contributors</p>
+                <p className="type-mono mt-2">{contributorCount}</p>
               </div>
-              <div className="rounded-[12px] border border-line bg-surface px-2 py-3.5 text-center">
-                <p className="text-xs font-medium text-muted">Release</p>
-                <p className={`mt-1 text-sm font-semibold tnum ${showLiveOpen && time.urgent ? "text-warning" : "text-ink"}`}>
+              <div>
+                <p className="text-sm text-char">Release</p>
+                <p className={`type-mono mt-2 ${showLiveOpen && time.urgent ? "underline decoration-2 underline-offset-4" : ""}`}>
                   {showLiveOpen ? time.label : endedByDeadline ? "Ended" : status.label}
                 </p>
               </div>
-              <div className="rounded-[12px] bg-brand-strong px-2 py-3.5 text-center">
-                <p className="text-xs font-medium text-white/70">Target</p>
-                <p className="mt-1 text-sm font-semibold text-white tnum">
+              <div>
+                <p className="text-sm text-char">Target</p>
+                <p className="type-mono mt-2">
                   {pool.target_currency && fxRate !== null
                     ? formatLocal(Number(target) * fxRate, pool.target_currency)
                     : `$${formatUsdc(target, { decimals: 0 })}`}
                 </p>
               </div>
-            </div>
-          </Card>
+            </WarmCard>
+          </SurfaceCard>
         </div>
 
         {/* Released summary + funding history — below progress on desktop */}
-        <div className="order-3 lg:order-none space-y-6 lg:col-span-2 lg:col-start-1 lg:row-start-2">
-          {/* Released summary */}
+        <div className="order-3 space-y-6 lg:order-none lg:col-span-2 lg:col-start-1 lg:row-start-2">
           {state.status === "released" && (
-            <Card className="border-success/30 bg-success-50/40 p-6">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-success text-white">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                </span>
-                <div>
-                  <p className="font-semibold text-ink">Funds released to the recipient</p>
-                  <p className="text-sm text-muted tnum">
-                    ${formatUsdc(state.currentAmount)} USDC
-                    {state.localCurrencyAmount ? ` · ≈ ${formatLocal(state.localCurrencyAmount, state.targetCurrency)} (rate ${state.fxRate}, informational)` : ""}
-                  </p>
-                  {(state.txHash ?? pool.release_tx_hash) && (
-                    <a
-                      href={txUrl((state.txHash ?? pool.release_tx_hash)!)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-success hover:underline"
-                    >
-                      View release on-chain ↗
-                    </a>
-                  )}
-                </div>
-              </div>
-            </Card>
+            <SurfaceCard className="border-[1.5px] border-ink-black">
+              <Tag tone="black">Released</Tag>
+              <p className="type-heading-sm mt-5">Funds released to the recipient</p>
+              <p className="type-mono mt-3">
+                ${formatUsdc(state.currentAmount)} USDC
+              </p>
+              {state.localCurrencyAmount ? (
+                <p className="mt-1 text-sm text-char">
+                  ≈ {formatLocal(state.localCurrencyAmount, state.targetCurrency)} (rate {String(state.fxRate)}, informational)
+                </p>
+              ) : null}
+              {(state.txHash ?? pool.release_tx_hash) && (
+                <a
+                  href={txUrl((state.txHash ?? pool.release_tx_hash)!)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-block text-body font-medium underline underline-offset-4"
+                >
+                  View release on-chain ↗
+                </a>
+              )}
+            </SurfaceCard>
           )}
 
-          {/* Funding history */}
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold text-ink">Funding history</h2>
+          <SurfaceCard>
+            <h2 className="type-heading-sm">Funding history</h2>
             {contributions.length === 0 ? (
-              <p className="mt-4 rounded-[12px] bg-surface-2 px-4 py-8 text-center text-sm text-muted">
-                No contributions yet. Be the first to chip in.
-              </p>
+              <WarmCard className="mt-6 !py-12 text-center text-body">No contributions yet. Be the first to chip in.</WarmCard>
             ) : (
-              <ul className="mt-4 divide-y divide-line">
-                {contributions.map((c) => {
-                  const name = c.contributor ?? "Someone";
-                  return (
-                    <li key={c.id} className="flex items-center gap-3 py-3">
-                      <Avatar name={name} size={38} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-ink tnum">{c.contributor ? shortAddress(c.contributor) : "Anonymous"}</p>
-                        <p className="text-xs text-muted">
-                          {timeAgo(c.created_at)}
-                          {c.tx_hash && (
-                            <>
-                              {" · "}
-                              <a
-                                href={txUrl(c.tx_hash)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-medium text-brand-600 hover:underline"
-                              >
-                                on-chain ↗
-                              </a>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                      <p className="text-sm font-semibold text-ink tnum">+${formatUsdc(c.amount)}</p>
-                    </li>
-                  );
-                })}
+              <ul className="mt-4">
+                {contributions.map((c) => (
+                  <li key={c.id} className="ledger-row flex items-center justify-between gap-4 py-4">
+                    <div className="min-w-0">
+                      <p className="truncate font-dm-mono text-body">{c.contributor ? shortAddress(c.contributor) : "Anonymous"}</p>
+                      <p className="text-sm text-char">
+                        {timeAgo(c.created_at)}
+                        {c.tx_hash && (
+                          <>
+                            {" · "}
+                            <a href={txUrl(c.tx_hash)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                              on-chain ↗
+                            </a>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <p className="type-mono shrink-0">+${formatUsdc(c.amount)}</p>
+                  </li>
+                ))}
               </ul>
             )}
             <a
               href={addressUrl(poolEscrowAddress)}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-brand-600"
+              className="mt-6 inline-block border-t border-oat pt-4 font-dm-mono text-sm text-char hover:text-ink-black hover:underline"
             >
               Held in escrow contract {shortAddress(poolEscrowAddress)} ↗
             </a>
-          </Card>
+          </SurfaceCard>
         </div>
 
-        {/* Action card — under "Raised so far" on mobile; sticky right column on desktop */}
-        <div className="order-2 lg:order-none lg:col-span-1 lg:col-start-3 lg:row-start-1 lg:row-span-2">
-          <div className="lg:sticky lg:top-24">
-            <Card className="p-6 shadow-sm">
-              {canContribute && (
-                <>
-                  <h2 className="text-lg font-semibold text-ink">Contribute</h2>
-                  <p className="mt-1 text-sm text-muted">Chip in any amount. It settles in seconds, no gas fee.</p>
-                  {isLoggedIn ? (
-                    <div className="mt-5 flex flex-col gap-3">
-                      <AmountInput
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        placeholder="0.00"
-                        step="0.01"
-                        min="0"
-                      />
-                      <div className="flex flex-wrap gap-2">
-                        {[10, 25, 50, 100].map((v) => (
-                          <button
-                            key={v}
-                            type="button"
-                            onClick={() => setAmount(String(v))}
-                            className="rounded-full border border-line bg-surface px-3 py-1 text-sm font-medium text-ink transition-colors hover:border-line-strong hover:bg-surface-2"
-                          >
-                            ${v}
-                          </button>
-                        ))}
-                      </div>
-                      {insufficient ? (
-                        <Link
-                          href="/settings"
-                          className="inline-flex h-13 min-h-[52px] w-full items-center justify-center rounded-none bg-brand-strong px-5 text-[15px] font-semibold text-white shadow-md transition-all hover:-translate-y-px hover:brightness-95 hover:shadow-lg"
-                        >
-                          Add funds
-                        </Link>
-                      ) : (
-                        <Button onClick={handleContribute} size="lg" disabled={!amount || Number(amount) <= 0 || contributeStatus === "working"}>
-                          {contributeStatus === "working" ? "Confirming…" : "Contribute with passkey"}
-                        </Button>
-                      )}
-                      <div className="flex items-center justify-between text-xs text-muted">
-                        <span className="tnum">
-                          Balance: {balance !== null ? `$${formatUsdc(balance)}` : "—"}
-                        </span>
-                        {viewerWalletAddress && <span className="tnum">{shortAddress(viewerWalletAddress)}</span>}
-                      </div>
-                      {insufficient && (
-                        <p className="text-xs text-warning">
-                          That&apos;s more than your balance. To add funds, send USDC on the Arc network to your wallet address.
-                        </p>
-                      )}
+        {/* Action card — under progress on mobile; sticky right column on desktop */}
+        <div className="order-2 lg:order-none lg:col-span-1 lg:col-start-3 lg:row-span-2 lg:row-start-1">
+          <SurfaceCard className="lg:sticky lg:top-20">
+            {canContribute && (
+              <>
+                <h2 className="type-heading-sm">Contribute</h2>
+                <p className="mt-2 text-body text-char">Chip in any amount. It settles in seconds, no gas fee.</p>
+                {isLoggedIn ? (
+                  <div className="mt-6 flex flex-col gap-4">
+                    <AmountField
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      aria-label="Amount in USDC"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {[10, 25, 50, 100].map((v) => (
+                        <TagButton key={v} selected={amount === String(v)} onClick={() => setAmount(String(v))}>
+                          ${v}
+                        </TagButton>
+                      ))}
                     </div>
-                  ) : (
-                    <div className="mt-5">
-                      <Link
-                        href={`/register?next=/pools/${pool.id}`}
-                        className="inline-flex h-11 w-full items-center justify-center rounded-none bg-navy px-5 text-[15px] font-semibold text-white shadow-md transition-all hover:-translate-y-px hover:bg-[#12365f] hover:shadow-lg"
-                      >
-                        Sign in to contribute
-                      </Link>
-                      <p className="mt-3 text-center text-xs text-muted">
-                        Takes a few seconds with a passkey. Already have one?{" "}
-                        <Link href={`/login?next=/pools/${pool.id}`} className="font-semibold text-brand hover:underline">Log in</Link>
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {endedByDeadline && (
-                <div className="text-center">
-                  <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                  </span>
-                  <p className="mt-3 font-semibold text-ink">Pool ended</p>
-                  <p className="mt-1 text-sm text-muted">
-                    Contributions are closed. If the goal was met, funds release to the recipient; otherwise contributors can claim a refund shortly.
-                  </p>
-                  <Button size="lg" className="mt-5 w-full" disabled>
-                    Pool ended
-                  </Button>
-                </div>
-              )}
-
-              {state.status === "refunded" &&
-                (viewerContributed ? (
-                  <>
-                    <h2 className="text-lg font-semibold text-ink">Claim your refund</h2>
-                    <p className="mt-1 text-sm text-muted">
-                      This pool didn&apos;t reach its goal in time. Your contribution is available to withdraw.
-                    </p>
-                    {isLoggedIn ? (
-                      <Button
-                        onClick={handleRefund}
-                        size="lg"
-                        className="mt-5 w-full"
-                        disabled={refundClaimed || refundStatus === "working"}
-                      >
-                        {refundClaimed ? "Refund claimed" : refundStatus === "working" ? "Claiming…" : "Claim refund"}
-                      </Button>
+                    {insufficient ? (
+                      <PillLink href="/settings" block>
+                        Add funds
+                      </PillLink>
                     ) : (
-                      <Link href={`/login?next=/pools/${pool.id}`} className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-none bg-navy px-5 text-[15px] font-semibold text-white shadow-md hover:shadow-lg">
-                        Sign in to claim
-                      </Link>
+                      <PillButton
+                        onClick={handleContribute}
+                        block
+                        disabled={!amount || Number(amount) <= 0 || contributeStatus === "working"}
+                      >
+                        {contributeStatus === "working" ? "Confirming…" : "Contribute with passkey"}
+                      </PillButton>
                     )}
-                  </>
+                    <div className="flex items-center justify-between font-dm-mono text-sm text-char">
+                      <span>Balance: {balance !== null ? `$${formatUsdc(balance)}` : "—"}</span>
+                      {viewerWalletAddress && <span>{shortAddress(viewerWalletAddress)}</span>}
+                    </div>
+                    {insufficient && (
+                      <FormMessage>
+                        That&apos;s more than your balance. To add funds, send USDC on the Arc network to your wallet address.
+                      </FormMessage>
+                    )}
+                  </div>
                 ) : (
-                  <div className="text-center">
-                    <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                    </span>
-                    <p className="mt-3 font-semibold text-ink">Pool refunded</p>
-                    <p className="mt-1 text-sm text-muted">
-                      This pool didn&apos;t reach its goal, so contributions were returned to everyone who gave.
+                  <div className="mt-6">
+                    <PillLink href={`/register?next=/pools/${pool.id}`} block>
+                      Sign in to contribute
+                    </PillLink>
+                    <p className="mt-4 text-center text-sm text-char">
+                      Takes a few seconds with a passkey. Already have one?{" "}
+                      <Link href={`/login?next=/pools/${pool.id}`} className="font-medium text-ink-black underline underline-offset-2">
+                        Log in
+                      </Link>
                     </p>
                   </div>
-                ))}
+                )}
+              </>
+            )}
 
-              {state.status === "released" && (
-                <div className="text-center">
-                  <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success-50 text-success">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  </span>
-                  <p className="mt-3 font-semibold text-ink">Goal reached</p>
-                  <p className="mt-1 text-sm text-muted">This pool is complete and funds have been released.</p>
-                </div>
-              )}
+            {endedByDeadline && (
+              <>
+                <h2 className="type-heading-sm">Pool ended</h2>
+                <p className="mt-2 text-body text-char">
+                  Contributions are closed. If the goal was met, funds release to the recipient; otherwise contributors can claim a refund shortly.
+                </p>
+                <PillButton variant="black" block className="mt-6" disabled>
+                  Pool ended
+                </PillButton>
+              </>
+            )}
 
-              {state.status === "cancelled" && (
-                <div className="text-center">
-                  <p className="font-semibold text-ink">Pool cancelled</p>
-                  <p className="mt-1 text-sm text-muted">This pool is no longer accepting contributions.</p>
-                </div>
-              )}
+            {state.status === "refunded" &&
+              (viewerContributed ? (
+                <>
+                  <h2 className="type-heading-sm">Claim your refund</h2>
+                  <p className="mt-2 text-body text-char">
+                    This pool didn&apos;t reach its goal in time. Your contribution is available to withdraw.
+                  </p>
+                  {isLoggedIn ? (
+                    <PillButton
+                      onClick={handleRefund}
+                      block
+                      className="mt-6"
+                      disabled={refundClaimed || refundStatus === "working"}
+                    >
+                      {refundClaimed ? "Refund claimed" : refundStatus === "working" ? "Claiming…" : "Claim refund"}
+                    </PillButton>
+                  ) : (
+                    <PillLink href={`/login?next=/pools/${pool.id}`} block className="mt-6">
+                      Sign in to claim
+                    </PillLink>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h2 className="type-heading-sm">Pool refunded</h2>
+                  <p className="mt-2 text-body text-char">
+                    This pool didn&apos;t reach its goal, so contributions were returned to everyone who gave.
+                  </p>
+                </>
+              ))}
 
-              {errorMessage && (
-                <p className="mt-4 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger">{errorMessage}</p>
-              )}
+            {state.status === "released" && (
+              <>
+                <h2 className="type-heading-sm">Goal reached</h2>
+                <p className="mt-2 text-body text-char">This pool is complete and funds have been released.</p>
+              </>
+            )}
 
-              <Button variant="secondary" onClick={copyLink} className="mt-4 w-full">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4M12 2v14"/></svg>
-                {copied ? "Link copied" : "Share pool"}
-              </Button>
+            {state.status === "cancelled" && (
+              <>
+                <h2 className="type-heading-sm">Pool cancelled</h2>
+                <p className="mt-2 text-body text-char">This pool is no longer accepting contributions.</p>
+              </>
+            )}
 
-              <div className="mt-4 flex items-center justify-center gap-2 border-t border-line pt-4 text-xs text-muted">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
-                Funds secured in on-chain escrow
-              </div>
-            </Card>
-          </div>
+            {errorMessage && <FormMessage className="mt-5">{errorMessage}</FormMessage>}
+
+            <PillButton variant="outlined" block onClick={copyLink} className="mt-4">
+              {copied ? "Link copied" : "Share pool"}
+            </PillButton>
+
+            <p className="mt-6 border-t border-oat pt-5 text-center text-sm text-char">Funds secured in on-chain escrow</p>
+          </SurfaceCard>
         </div>
       </div>
     </div>
   );
 }
-

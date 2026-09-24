@@ -1,15 +1,11 @@
 import { redirect } from "next/navigation";
 import { TopNav } from "@/components/TopNav";
 import { PoolsExplorer } from "@/components/PoolsExplorer";
-import { ButtonLink } from "@/components/ui/Button";
+import { Section } from "@/components/design/Section";
 import { getSessionUser, displayName } from "@/lib/session";
 import { createServiceClient } from "@/lib/supabase";
 import { getContributorCounts } from "@/lib/pools";
-import type { PoolSummary } from "@/components/PoolCard";
-
-function PlusIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>;
-}
+import type { PoolSummary } from "@/components/PoolTable";
 
 export default async function PoolsPage() {
   const user = await getSessionUser();
@@ -38,27 +34,22 @@ export default async function PoolsPage() {
   }
   const contributedPools = Array.from(contributedById.values());
 
-  const allIds = Array.from(new Set([...createdPools, ...contributedPools].map((p) => p.id)));
-  const counts = await getContributorCounts(supabase, allIds);
-  const withCounts = (list: PoolSummary[]) =>
-    list.map((p) => ({ ...p, contributor_count: counts[p.id] ?? 0 }));
+  // One list: every pool the user created or chipped into, deduped, newest first.
+  const byId = new Map<string, PoolSummary & { created_at?: string }>();
+  for (const p of [...createdPools, ...contributedPools]) byId.set(p.id, p);
+  const all = Array.from(byId.values()).sort(
+    (a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
+  );
+  const counts = await getContributorCounts(supabase, all.map((p) => p.id));
+  const pools = all.map((p) => ({ ...p, contributor_count: counts[p.id] ?? 0 }));
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-screen">
       <TopNav walletAddress={user.modular_wallet_address} name={displayName(user)} />
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-navy">Pools</h1>
-          </div>
-          <ButtonLink href="/pools/new" className="self-start sm:self-auto">
-            <PlusIcon />
-            Create a pool
-          </ButtonLink>
-        </div>
-        <div className="mt-8">
-          <PoolsExplorer created={withCounts(createdPools)} contributed={withCounts(contributedPools)} />
-        </div>
+      <main>
+        <Section className="!pt-10">
+          <PoolsExplorer pools={pools} />
+        </Section>
       </main>
     </div>
   );

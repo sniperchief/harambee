@@ -1,38 +1,39 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 
-const COLUMNS: { h: string; items: { label: string; href?: string }[] }[] = [
+// Footer sits on surface level 3 (Ink) — the inverted block DESIGN.md reserves
+// for footers and high-contrast sections.
+const COLUMNS: { h: string; items: { label: string; href: string }[] }[] = [
   {
     h: "Product",
-    items: [{ label: "Documentation", href: "/docs" }],
+    items: [
+      { label: "How it works", href: "/#how" },
+      { label: "Use cases", href: "/#use-cases" },
+      { label: "FAQ", href: "/#faq" },
+    ],
   },
+  { h: "Resources", items: [{ label: "Documentation", href: "/docs" }] },
 ];
 
 export function SiteFooter() {
   return (
-    <footer className="bg-navy text-white">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-          <div className="max-w-xs">
-            <Logo href={null} size={30} tone="light" />
-            <p className="mt-3 text-sm leading-relaxed text-white/70">
-              Pool together. Give together. Achieve together. The calm way for groups to reach a shared goal.
-            </p>
+    <footer className="section section--ink">
+      <div className="section__inner">
+        <div className="flex flex-col gap-12 md:flex-row md:justify-between">
+          <div className="max-w-sm">
+            <Logo href={null} tone="light" />
+            <p className="type-sub-display mt-6">Pool together. Give together. Achieve together.</p>
           </div>
-          <div className="grid grid-cols-2 gap-x-12 gap-y-2 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-x-16 gap-y-8">
             {COLUMNS.map((col) => (
               <div key={col.h}>
-                <p className="text-xs font-semibold uppercase tracking-wide text-white/50">{col.h}</p>
-                <ul className="mt-3 space-y-2">
+                <p className="text-sm text-bone-white/60">{col.h}</p>
+                <ul className="mt-4 space-y-3">
                   {col.items.map((i) => (
                     <li key={i.label}>
-                      {i.href ? (
-                        <Link href={i.href} className="text-sm text-white/80 hover:text-white">
-                          {i.label}
-                        </Link>
-                      ) : (
-                        <span className="text-sm text-white/80 hover:text-white">{i.label}</span>
-                      )}
+                      <Link href={i.href} className="text-body text-bone-white underline-offset-4 hover:underline">
+                        {i.label}
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -40,7 +41,8 @@ export function SiteFooter() {
             ))}
           </div>
         </div>
-        <div className="mt-10 flex flex-col gap-2 border-t border-white/15 pt-6 text-xs text-white/60 sm:flex-row sm:items-center sm:justify-between">
+        <hr className="mt-20 border-0 border-t border-bone-white/25" />
+        <div className="mt-6 flex flex-col gap-2 text-sm text-bone-white/60 sm:flex-row sm:justify-between">
           <p>© {new Date().getFullYear()} Harambee. Funds held in audited smart-contract escrow.</p>
           <p>Built on Circle Arc · Settled in USDC</p>
         </div>

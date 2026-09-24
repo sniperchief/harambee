@@ -1,13 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
 
-// The official Harambee mark (public/harambee-logo.png) — transparent navy
-// silhouette. On dark surfaces we invert it to white via a CSS filter. The
-// mark is the capital "H"; the wordmark appends "arambee" to read "Harambee".
+// The official Harambee mark (public/harambee-logo.png) is a navy silhouette;
+// it's rendered as pure ink (or bone white on ink) via CSS filters. The mark is
+// the capital "H" and the Champ 26/800 wordmark appends "arambee".
 const RATIO = 700 / 923; // intrinsic width / height of the cropped mark
 
 export function LogoMark({
-  size = 32,
+  size = 28,
   tone = "dark",
   className = "",
 }: {
@@ -15,40 +15,38 @@ export function LogoMark({
   tone?: "dark" | "light";
   className?: string;
 }) {
-  const width = Math.round(size * RATIO);
   return (
     <Image
       src="/harambee-logo.png"
       alt="Harambee"
-      width={width}
+      width={Math.round(size * RATIO)}
       height={size}
       className={className}
-      style={tone === "light" ? { filter: "brightness(0) invert(1)" } : undefined}
+      style={{ filter: tone === "light" ? "brightness(0) invert(1)" : "brightness(0)" }}
     />
   );
 }
 
 export function Logo({
-  size = 32,
   href = "/",
   tone = "dark",
   className = "",
 }: {
-  size?: number;
   href?: string | null;
   tone?: "dark" | "light";
+  /** @deprecated the wordmark is fixed at Champ 26px. */
+  size?: number;
   className?: string;
 }) {
-  const color = tone === "light" ? "text-white" : "text-navy";
   const inner = (
-    <span className={`inline-flex items-center gap-1.5 ${color} ${className}`}>
-      <LogoMark size={size} tone={tone} />
-      <span className="text-[19px] font-bold tracking-[-0.01em]">arambee</span>
+    <span className={`inline-flex items-center gap-0.5 ${tone === "light" ? "text-bone-white" : "text-ink-black"} ${className}`}>
+      <LogoMark size={28} tone={tone} />
+      <span className="type-heading-sm leading-none">arambee</span>
     </span>
   );
   if (href === null) return inner;
   return (
-    <Link href={href} className="inline-flex items-center rounded-lg">
+    <Link href={href} className="inline-flex items-center rounded-full no-underline">
       {inner}
     </Link>
   );

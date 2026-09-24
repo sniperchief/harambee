@@ -3,16 +3,22 @@
 import { useState } from "react";
 import { shortAddress, formatUsdc } from "@/lib/format";
 import { useWalletBalance } from "@/lib/useWalletBalance";
+import { PillButton } from "@/components/design/PillButton";
+import { StatCallout } from "@/components/design/StatCallout";
+import { WarmCard } from "@/components/design/Card";
 
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
+// Pill-shaped switch: ink when on, Oat when off.
+function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
     <button
+      type="button"
       role="switch"
       aria-checked={on}
+      aria-label={label}
       onClick={onClick}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${on ? "bg-brand" : "bg-[#d5d9e0]"}`}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${on ? "bg-ink-black" : "bg-oat"}`}
     >
-      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
+      <span className={`absolute top-1 h-5 w-5 rounded-full bg-bone-white transition-all ${on ? "left-6" : "left-1"}`} />
     </button>
   );
 }
@@ -21,28 +27,25 @@ export function WalletCard({ address }: { address: string | null }) {
   const [copied, setCopied] = useState(false);
   const { balance, loading } = useWalletBalance();
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <p className="text-sm font-medium text-muted">Available balance</p>
-        <div className="mt-1 h-8">
-          {loading ? (
-            <span className="inline-block h-7 w-28 animate-pulse rounded-md bg-surface-2" />
-          ) : (
-            <p className="text-2xl font-bold leading-none tracking-tight text-navy tnum">
-              {balance !== null ? `$${formatUsdc(balance)}` : "—"}
-            </p>
-          )}
+    <div className="flex flex-col gap-8">
+      {loading ? (
+        <div>
+          <div className="skeleton h-[54px] w-48 rounded-2xl" />
+          <div className="skeleton mt-3 h-5 w-32 rounded-full" />
         </div>
-        <p className="mt-1.5 text-xs text-muted">USDC</p>
-      </div>
+      ) : (
+        <StatCallout value={balance !== null ? `$${formatUsdc(balance)}` : "—"} label="Available balance · USDC" />
+      )}
 
-      <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-ink">Smart wallet address</p>
-        <p className="mt-0.5 truncate text-sm text-muted tnum">{address ?? "—"}</p>
-      </div>
-      <div className="flex shrink-0 gap-2">
-        <button
+      <div className="flex flex-col gap-4 border-t border-oat pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-body font-medium">Smart wallet address</p>
+          <p className="mt-1 truncate font-dm-mono text-sm text-char">{address ?? "—"}</p>
+        </div>
+        <PillButton
+          variant="outlined"
+          compact
+          className="shrink-0"
           onClick={async () => {
             if (!address) return;
             try {
@@ -51,16 +54,15 @@ export function WalletCard({ address }: { address: string | null }) {
               setTimeout(() => setCopied(false), 1600);
             } catch {}
           }}
-          className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3.5 text-sm font-semibold text-ink hover:border-line-strong hover:bg-surface-2"
         >
           {copied ? "Copied" : `Copy ${address ? shortAddress(address) : ""}`}
-        </button>
+        </PillButton>
       </div>
-      </div>
-      <p className="text-xs text-muted">
+
+      <WarmCard className="!p-5 text-sm">
         To add funds, send USDC on the Arc network to this address. Sending other tokens, or USDC on
         another network, won&apos;t arrive.
-      </p>
+      </WarmCard>
     </div>
   );
 }
@@ -79,16 +81,16 @@ export function NotificationToggles() {
     { key: "product", title: "Product updates", body: "Occasional news about new Harambee features." },
   ];
   return (
-    <div className="divide-y divide-line">
+    <ul>
       {rows.map((r) => (
-        <div key={r.key} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
+        <li key={r.key} className="ledger-row flex items-center justify-between gap-4 py-5 first:pt-0 last:pb-0">
           <div>
-            <p className="text-sm font-medium text-ink">{r.title}</p>
-            <p className="mt-0.5 text-sm text-muted">{r.body}</p>
+            <p className="text-body font-medium">{r.title}</p>
+            <p className="mt-0.5 text-body text-char">{r.body}</p>
           </div>
-          <Toggle on={prefs[r.key]} onClick={() => setPrefs((p) => ({ ...p, [r.key]: !p[r.key] }))} />
-        </div>
+          <Toggle label={r.title} on={prefs[r.key]} onClick={() => setPrefs((p) => ({ ...p, [r.key]: !p[r.key] }))} />
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
