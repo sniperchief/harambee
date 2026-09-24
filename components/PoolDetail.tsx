@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Progress } from "@/components/ui/Progress";
@@ -53,7 +53,6 @@ export type Contribution = {
 type PoolState = {
   currentAmount: string | number;
   status: PoolStatus;
-  finalValue?: string;
   localCurrencyAmount?: string | number | null;
   targetCurrency?: string | null;
   fxRate?: string | number | null;
@@ -71,10 +70,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown> | n
   } catch {
     return null;
   }
-}
-
-function LeafIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>;
 }
 
 export function PoolDetail({
@@ -109,25 +104,8 @@ export function PoolDetail({
   const [errorMessage, setErrorMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const [yieldEarned, setYieldEarned] = useState<string | null>(null);
   const { balance, refresh: refreshBalance } = useWalletBalance();
   const fxRate = useFxRate(pool.target_currency);
-
-  const refreshYield = useCallback(async () => {
-    try {
-      const r = await fetch(`/api/pools/${pool.id}/yield`);
-      if (r.ok) {
-        const body = await r.json();
-        setYieldEarned(body.yield ?? null);
-      }
-    } catch {
-      // leave as-is
-    }
-  }, [pool.id]);
-
-  useEffect(() => {
-    refreshYield();
-  }, [refreshYield]);
 
   // Tick once a second so expiry and the countdown update live — this is what
   // flips the contribute box to "Pool ended" the instant the clock runs out,
@@ -170,7 +148,7 @@ export function PoolDetail({
       const response = await fetch(`/api/pools/${pool.id}/contribute/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, txHash }),
+        body: JSON.stringify({ txHash }),
       });
       const body = await safeJson(response);
       if (!response.ok) throw new Error((body?.error as string) ?? "Failed to record contribution");
@@ -178,7 +156,6 @@ export function PoolDetail({
       setAmount("");
       setContributeStatus("idle");
       refreshBalance();
-      refreshYield();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Contribution failed";
       const closed = /not open|deadline|closed/i.test(msg);
@@ -213,8 +190,14 @@ export function PoolDetail({
       await refundWithPasskey(poolEscrowAddress, pool.onchain_pool_id);
       setRefundStatus("done");
     } catch (err) {
-      setRefundStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Refund failed");
+      const { cancelled, message } = friendlyPasskeyError(err);
+      if (cancelled) {
+        setRefundStatus("idle");
+      } else {
+        setRefundStatus("error");
+        const msg = err instanceof Error ? err.message : "";
+        setErrorMessage(/nothing to refund/i.test(msg) ? "This refund has already been claimed." : message);
+      }
     }
   }
 
@@ -241,16 +224,10 @@ export function PoolDetail({
   const contributionsClosed = now >= new Date(pool.deadline).getTime() - CLOSE_BUFFER_MS;
   const canContribute = statusOpen && !contributionsClosed; // genuinely open right now
   const endedByDeadline = statusOpen && contributionsClosed; // "open" in DB but past the (buffered) deadline
-  const showLiveOpen = canContribute; // drives the "Open" badge + yield line
+  const showLiveOpen = canContribute; // drives the "Open" badge
   const badgeLabel = endedByDeadline ? "Ended" : status.label;
   const badgeTone = endedByDeadline ? "muted" : status.tone;
   const insufficient = balance !== null && !!amount && Number(amount) > Number(balance);
-  const yieldNum = yieldEarned !== null ? Number(yieldEarned) : 0;
-  const showYieldAmt = yieldNum >= 0.00005;
-  const releasedYield =
-    state.status === "released" && state.finalValue
-      ? Math.max(0, Number(state.finalValue) - Number(state.currentAmount))
-      : 0;
   const refundClaimed = viewerClaimed || refundStatus === "done";
 
   return (
@@ -260,14 +237,6 @@ export function PoolDetail({
         <div>
           <div className="flex items-center gap-2.5">
             <Badge tone={badgeTone} dot={showLiveOpen}>{badgeLabel}</Badge>
-            {showLiveOpen && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
-                <LeafIcon />
-                {showYieldAmt
-                  ? `Earning yield · +$${formatUsdc(yieldEarned!, { decimals: 4 })}`
-                  : "Earning yield in escrow"}
-              </span>
-            )}
           </div>
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-navy sm:text-[34px]">{pool.title}</h1>
           {pool.description && <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-muted">{pool.description}</p>}
@@ -332,14 +301,9 @@ export function PoolDetail({
                 <div>
                   <p className="font-semibold text-ink">Funds released to the recipient</p>
                   <p className="text-sm text-muted tnum">
-                    ${formatUsdc(state.finalValue ?? state.currentAmount)} USDC
+                    ${formatUsdc(state.currentAmount)} USDC
                     {state.localCurrencyAmount ? ` · ≈ ${formatLocal(state.localCurrencyAmount, state.targetCurrency)} (rate ${state.fxRate}, informational)` : ""}
                   </p>
-                  {releasedYield > 0 && (
-                    <p className="mt-0.5 text-xs font-medium text-success tnum">
-                      includes +${formatUsdc(releasedYield, { decimals: 4 })} yield earned
-                    </p>
-                  )}
                   {(state.txHash ?? pool.release_tx_hash) && (
                     <a
                       href={txUrl((state.txHash ?? pool.release_tx_hash)!)}
@@ -435,14 +399,12 @@ export function PoolDetail({
                         ))}
                       </div>
                       {insufficient ? (
-                        <a
-                          href="https://faucet.circle.com/"
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <Link
+                          href="/settings"
                           className="inline-flex h-13 min-h-[52px] w-full items-center justify-center rounded-none bg-brand-strong px-5 text-[15px] font-semibold text-white shadow-md transition-all hover:-translate-y-px hover:brightness-95 hover:shadow-lg"
                         >
                           Add funds
-                        </a>
+                        </Link>
                       ) : (
                         <Button onClick={handleContribute} size="lg" disabled={!amount || Number(amount) <= 0 || contributeStatus === "working"}>
                           {contributeStatus === "working" ? "Confirming…" : "Contribute with passkey"}
@@ -456,7 +418,7 @@ export function PoolDetail({
                       </div>
                       {insufficient && (
                         <p className="text-xs text-warning">
-                          That&apos;s more than your balance — add funds to contribute this amount.
+                          That&apos;s more than your balance. To add funds, send USDC on the Arc network to your wallet address.
                         </p>
                       )}
                     </div>

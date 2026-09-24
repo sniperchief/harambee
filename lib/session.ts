@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { SESSION_COOKIE, readSessionValue } from "./authCookie";
 import { createServiceClient } from "./supabase";
 
 export type SessionUser = {
@@ -8,10 +9,15 @@ export type SessionUser = {
   created_at: string;
 };
 
+/** The logged-in user's id from a verified session cookie, or null. Server-only. */
+export async function getSessionUserId(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return readSessionValue(cookieStore.get(SESSION_COOKIE)?.value);
+}
+
 /** Returns the logged-in user row, or null. Server-only. */
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("harambee_session")?.value;
+  const userId = await getSessionUserId();
   if (!userId) return null;
 
   const supabase = createServiceClient();

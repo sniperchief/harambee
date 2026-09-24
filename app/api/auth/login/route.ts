@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verify, type WebAuthnData } from "webauthn-p256";
 import { createServiceClient } from "@/lib/supabase";
 import { consumeChallenge } from "@/lib/authChallenge";
-import { sessionCookieOptions } from "@/lib/authCookie";
+import { SESSION_COOKIE, createSessionValue, sessionCookieOptions } from "@/lib/authCookie";
 
 // Server-verified passkey login. The client fetches a challenge from
 // /api/auth/challenge, signs it with its passkey, and posts the signature
@@ -65,6 +65,6 @@ export async function POST(request: NextRequest) {
   }
 
   const response = NextResponse.json({ userId: user.id, address: user.modular_wallet_address });
-  response.cookies.set("harambee_session", user.id, sessionCookieOptions());
+  response.cookies.set(SESSION_COOKIE, createSessionValue(user.id), sessionCookieOptions());
   return response;
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { getSessionUserId } from "@/lib/session";
 import { Gem, GraduationCap, HandHeart, Building2, Handshake, Globe } from "lucide-react";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
@@ -29,15 +29,15 @@ const STEPS = [
   },
   {
     n: "3",
-    title: "Reach the goal, funds release",
-    body: "Money is held safely in escrow and earns yield while it waits. Hit the target and it releases automatically.",
+    title: "Funds release or refund",
+    body: "Money stays in escrow until the pool's rules are met. Then it releases to the recipient automatically — or, if the pool is set to refund, everyone can take their money back.",
   },
 ];
 
 const FAQ = [
   {
     q: "Where is my money held?",
-    a: "Every contribution goes into an audited smart-contract escrow — not a personal account. Funds can only move to the recipient when the goal is met, or back to contributors if it isn't. No single person can withdraw early.",
+    a: "Every contribution goes into a smart-contract escrow — not a personal account. The money can only leave by the rules set when the pool was created: to the recipient, or back to the contributors. No single person can withdraw early, and the rules can't be changed afterwards.",
   },
   {
     q: "Do I need to understand crypto?",
@@ -45,11 +45,7 @@ const FAQ = [
   },
   {
     q: "What happens if we don't reach the goal?",
-    a: "If the deadline passes without hitting the target, every contributor can claim a full refund from escrow. Nobody loses their money.",
-  },
-  {
-    q: "How does the pool earn yield?",
-    a: "While funds wait in escrow, they sit in a low-risk yield vault. Any yield earned is added to the pool — so waiting works in your favour.",
+    a: "That depends on the rule the organizer chose when creating the pool. With “only when target is reached”, every contributor can claim back exactly what they put in. With the other rules, whatever was raised goes to the recipient at the deadline.",
   },
   {
     q: "Are there gas fees?",
@@ -58,8 +54,7 @@ const FAQ = [
 ];
 
 export default async function Home() {
-  const cookieStore = await cookies();
-  const isLoggedIn = !!cookieStore.get("harambee_session")?.value;
+  const isLoggedIn = !!(await getSessionUserId());
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -73,7 +68,7 @@ export default async function Home() {
               <h1 className="text-[40px] font-bold leading-[1.05] tracking-[-0.02em] text-navy sm:text-[56px]">
                 Pool together.
                 <br />
-                Grow together.
+                Give together.
                 <br />
                 <TypingText
                   words={["Achieve together.", "Celebrate together."]}
@@ -81,7 +76,7 @@ export default async function Home() {
                 />
               </h1>
               <p className="mt-5 max-w-md text-lg leading-relaxed text-muted">
-                Harambee is the calm, trustworthy way for groups to collect money toward a shared goal — held safely in escrow, growing while it waits.
+                Harambee is the calm, trustworthy way for groups to collect money toward a shared goal — held safely in escrow, then released or refunded by the rules you set.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <ButtonLink href={isLoggedIn ? "/pools/new" : "/register"} size="lg" variant="coral">

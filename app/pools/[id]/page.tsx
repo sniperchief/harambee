@@ -1,21 +1,27 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { PoolDetail, type Contribution } from "@/components/PoolDetail";
 import { Logo } from "@/components/Logo";
 import { getPoolEscrowAddress } from "@/lib/poolEscrow";
 import { getOnchainContribution } from "@/lib/onchainContribution";
+import { getSessionUserId } from "@/lib/session";
 import { createServiceClient } from "@/lib/supabase";
 
 export default async function PoolPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const supabase = createServiceClient();
-  const { data: pool } = await supabase.from("pools").select().eq("id", id).single();
+  // Only the fields the page shows — this object is sent to the browser.
+  const { data: pool } = await supabase
+    .from("pools")
+    .select(
+      "id, title, description, target_amount, current_amount, deadline, status, onchain_pool_id, target_currency, local_currency_amount, fx_rate, recipient_wallet_address, release_tx_hash, created_at"
+    )
+    .eq("id", id)
+    .single();
   if (!pool) notFound();
 
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("harambee_session")?.value;
+  const userId = await getSessionUserId();
 
   let viewerWalletAddress: string | null = null;
   const isLoggedIn = !!userId;
@@ -87,7 +93,7 @@ export default async function PoolPage({ params }: { params: Promise<{ id: strin
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:py-10">
         <PoolDetail
           pool={pool}
-          poolEscrowAddress={getPoolEscrowAddress() as `0x${string}`}
+          poolEscrowAddress={getPoolEscrowAddress()}
           isLoggedIn={isLoggedIn}
           viewerWalletAddress={viewerWalletAddress}
           contributions={contributions}

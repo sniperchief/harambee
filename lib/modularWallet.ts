@@ -1,32 +1,14 @@
-import { createPublicClient } from "viem";
-import { arcTestnet } from "viem/chains";
 import { toWebAuthnAccount } from "viem/account-abstraction";
 import { sign, type WebAuthnData } from "webauthn-p256";
 import {
-  toModularTransport,
-  toPasskeyTransport,
   toWebAuthnCredential,
   toCircleSmartAccount,
   WebAuthnMode,
 } from "@circle-fin/modular-wallets-core";
+import { getModularClients } from "./modularWalletConfig";
 
 // Browser-only: WebAuthn requires a real window/navigator.credentials context.
-function getClients() {
-  const clientKey = process.env.NEXT_PUBLIC_CIRCLE_CLIENT_KEY!;
-  const clientUrl = process.env.NEXT_PUBLIC_CIRCLE_CLIENT_URL!;
-
-  const passkeyTransport = toPasskeyTransport(clientUrl, clientKey);
-  const modularTransport = toModularTransport(
-    `${clientUrl}/arcTestnet`,
-    clientKey
-  );
-  const publicClient = createPublicClient({
-    chain: arcTestnet,
-    transport: modularTransport,
-  });
-
-  return { passkeyTransport, publicClient };
-}
+const getClients = getModularClients;
 
 async function credentialToAddress(
   credential: Awaited<ReturnType<typeof toWebAuthnCredential>>,

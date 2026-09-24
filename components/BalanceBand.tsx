@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useWalletBalance } from "@/lib/useWalletBalance";
 import { formatUsdc } from "@/lib/format";
 
@@ -21,16 +22,15 @@ export function BalanceBand() {
             </p>
           )}
         </div>
-        <p className="mt-2 text-xs text-white/50">Testnet USDC · ready to contribute</p>
+        <p className="mt-2 text-xs text-white/50">USDC · ready to contribute</p>
       </div>
-      <a
-        href="https://faucet.circle.com/"
-        target="_blank"
-        rel="noopener noreferrer"
+      {/* Funding is a plain USDC transfer to the user's wallet address, which Settings shows. */}
+      <Link
+        href="/settings"
         className="inline-flex h-11 shrink-0 items-center justify-center rounded-none bg-brand-strong px-5 text-[15px] font-semibold text-white shadow-md transition-all hover:-translate-y-px hover:brightness-95 hover:shadow-lg"
       >
         Add funds
-      </a>
+      </Link>
     </div>
   );
 }

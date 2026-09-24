@@ -48,5 +48,13 @@ export function friendlyPasskeyError(err: unknown): { message: string; cancelled
     return { cancelled: false, message: "We couldn't reach the wallet service. Please try again in a moment." };
   }
 
+  // The transaction reached the chain but the escrow rejected it — no money moved.
+  if (has(/transaction reverted/i)) {
+    return { cancelled: false, message: "The transaction didn't go through, so no money moved. Please try again." };
+  }
+  if (has(/couldn't confirm this contribution/i)) {
+    return { cancelled: false, message: "We couldn't confirm that contribution on-chain. Refresh the page to see the latest total." };
+  }
+
   return { cancelled: false, message: "Something went wrong. Please try again." };
 }

@@ -1,4 +1,4 @@
-import { Sprout } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Progress } from "@/components/ui/Progress";
 
@@ -59,10 +59,10 @@ export function HeroMockup() {
 
         <div className="mt-4 flex items-center justify-between rounded-[14px] bg-surface-2 px-4 py-3">
           <span className="inline-flex items-center gap-2 text-sm text-navy">
-            <Sprout size={16} className="text-success" />
-            Yield earned in escrow
+            <ShieldCheck size={16} className="text-success" />
+            Held in escrow
           </span>
-          <span className="text-sm font-semibold text-success tnum">+$126.40</span>
+          <span className="text-sm font-semibold text-success">Releases at goal</span>
         </div>
       </div>
 

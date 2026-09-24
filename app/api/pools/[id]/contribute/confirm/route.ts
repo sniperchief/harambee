@@ -1,27 +1,33 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { formatEther } from "viem";
+import { getVerifiedContributionWei } from "@/lib/poolEscrow";
 import { syncPoolFromChain } from "@/lib/poolSync";
+import { getSessionUser } from "@/lib/session";
 import { createServiceClient } from "@/lib/supabase";
 
 // Called by the browser right after a passkey-signed contribute() succeeds
-// on-chain. Logs the individual contribution (real contributor_id now that
-// there's a logged-in user, unlike the null-contributor_id curl-testing
-// path), then re-syncs the pool's aggregate state from the contract.
+// on-chain. Nothing from the client is trusted as-is: the transaction is
+// looked up on Arc and must contain a Contributed event from our escrow, for
+// this pool, from the logged-in user's wallet. The amount recorded is the
+// on-chain amount. Then the pool's aggregate state is re-synced from the
+// contract.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: poolId } = await params;
-  const { amount, txHash } = await request.json();
+  const { txHash } = await request.json();
 
-  if (!amount || !txHash) {
-    return NextResponse.json({ error: "amount and txHash are required" }, { status: 400 });
+  if (!txHash || typeof txHash !== "string") {
+    return NextResponse.json({ error: "txHash is required" }, { status: 400 });
   }
 
-  const cookieStore = await cookies();
-  const contributorId = cookieStore.get("harambee_session")?.value;
-  if (!contributorId) {
+  const user = await getSessionUser();
+  if (!user) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
+  }
+  if (!user.modular_wallet_address) {
+    return NextResponse.json({ error: "Your account has no wallet" }, { status: 400 });
   }
 
   const supabase = createServiceClient();
@@ -35,15 +41,28 @@ export async function POST(
     return NextResponse.json({ error: "Pool not found" }, { status: 404 });
   }
 
+  let amountWei: bigint;
+  try {
+    amountWei = await getVerifiedContributionWei(txHash, pool.onchain_pool_id, user.modular_wallet_address);
+  } catch (err) {
+    console.error("Contribution verification failed:", err);
+    return NextResponse.json(
+      { error: "We couldn't confirm this contribution on-chain." },
+      { status: 400 }
+    );
+  }
+
   const { error: contributionError } = await supabase.from("pool_contributions").insert({
     pool_id: poolId,
-    contributor_id: contributorId,
-    amount,
-    tx_hash: txHash,
+    contributor_id: user.id,
+    amount: formatEther(amountWei),
+    tx_hash: txHash.toLowerCase(),
     status: "confirmed",
   });
 
-  if (contributionError) {
+  // 23505 = this transaction is already recorded (e.g. a retried request).
+  // The contribution exists either way, so carry on and return pool state.
+  if (contributionError && contributionError.code !== "23505") {
     return NextResponse.json({ error: contributionError.message }, { status: 500 });
   }
 

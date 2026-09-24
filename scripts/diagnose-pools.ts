@@ -3,11 +3,7 @@ config({ path: ".env.local" });
 
 import { formatEther } from "viem";
 import { createServiceClient } from "../lib/supabase";
-import { createCircleContractsClient } from "../lib/circleContracts";
-import { getPoolEscrowAbiJson, getPoolEscrowAddress } from "../lib/poolEscrow";
-
-const STATUS = ["open", "released", "refunded"];
-const ZERO = "0x0000000000000000000000000000000000000000";
+import { readOnchainPool } from "../lib/poolEscrow";
 
 async function main() {
   const supabase = createServiceClient();
@@ -35,29 +31,18 @@ async function main() {
     console.log("No duplicate onchain_pool_id values.\n");
   }
 
-  const contractsClient = createCircleContractsClient();
-  const address = getPoolEscrowAddress();
-  const abiJson = getPoolEscrowAbiJson();
-
   for (const p of rows) {
     const dbDeadline = new Date(p.deadline).toISOString();
     try {
-      const r = await contractsClient.queryContract({
-        address,
-        blockchain: "ARC-TESTNET",
-        abiJson,
-        abiFunctionSignature: "getPool(uint256)",
-        abiParameters: [String(p.onchain_pool_id)],
-      });
-      const [recipient, targetWei, currentWei, deadlineStr, statusIdx] = r.data?.outputValues ?? [];
-      const exists = recipient && recipient !== ZERO;
-      const chainStatus = exists ? STATUS[Number(statusIdx)] ?? `idx${statusIdx}` : "DOES-NOT-EXIST";
-      const chainDeadline = exists ? new Date(Number(deadlineStr) * 1000).toISOString() : "—";
+      const chain = await readOnchainPool(String(p.onchain_pool_id));
+      const exists = chain.exists;
+      const chainStatus = exists ? chain.status : "DOES-NOT-EXIST";
+      const chainDeadline = exists ? new Date(chain.deadline * 1000).toISOString() : "—";
       const mismatch = exists && chainDeadline !== dbDeadline ? "  <-- DEADLINE MISMATCH" : "";
       console.log(`on-chain #${p.onchain_pool_id}  "${p.title}"`);
       console.log(`   DB:    status=${p.status}  current=${p.current_amount}  target=${p.target_amount}  deadline=${dbDeadline}`);
       console.log(
-        `   CHAIN: status=${chainStatus}  current=${exists ? formatEther(BigInt(currentWei)) : "—"}  target=${exists ? formatEther(BigInt(targetWei)) : "—"}  deadline=${chainDeadline}${mismatch}`
+        `   CHAIN: status=${chainStatus}  current=${exists ? chain.currentAmount : "—"}  target=${exists ? formatEther(chain.targetAmountWei) : "—"}  deadline=${chainDeadline}${mismatch}`
       );
       console.log("");
     } catch (e) {

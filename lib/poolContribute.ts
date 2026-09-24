@@ -3,17 +3,16 @@
 // auth/display, this derives the same Circle smart account but keeps it as
 // a signable object, so it can actually submit a sponsored on-chain
 // transaction — the piece the auth flow never needed.
-import { createPublicClient, encodeFunctionData, parseEther, type Address } from "viem";
-import { arcTestnet } from "viem/chains";
+import { encodeFunctionData, parseEther, type Address } from "viem";
 import { toWebAuthnAccount, createBundlerClient } from "viem/account-abstraction";
 import {
-  toModularTransport,
-  toPasskeyTransport,
   toWebAuthnCredential,
   toCircleSmartAccount,
   getUserOperationGasPrice,
   WebAuthnMode,
 } from "@circle-fin/modular-wallets-core";
+import { getModularClients } from "./modularWalletConfig";
+import { arcMainnet } from "./network";
 
 // Only the one function being called is needed to encode calldata — no
 // reason to ship the full PoolEscrow ABI (loaded server-side via fs) to the
@@ -39,12 +38,7 @@ const REFUND_ABI = [
 ] as const;
 
 async function getBundlerClient() {
-  const clientKey = process.env.NEXT_PUBLIC_CIRCLE_CLIENT_KEY!;
-  const clientUrl = process.env.NEXT_PUBLIC_CIRCLE_CLIENT_URL!;
-
-  const passkeyTransport = toPasskeyTransport(clientUrl, clientKey);
-  const modularTransport = toModularTransport(`${clientUrl}/arcTestnet`, clientKey);
-  const publicClient = createPublicClient({ chain: arcTestnet, transport: modularTransport });
+  const { passkeyTransport, modularTransport, publicClient } = getModularClients();
 
   // Re-authenticate via the passkey each time: this is what actually
   // authorizes spending from this specific smart account.
@@ -59,7 +53,7 @@ async function getBundlerClient() {
   // (Circle Gas Station) endpoint — `paymaster: true` is what sponsors gas.
   const bundlerClient = createBundlerClient({
     account,
-    chain: arcTestnet,
+    chain: arcMainnet,
     transport: modularTransport,
     paymaster: true,
     // viem's default fee estimate underprices maxPriorityFeePerGas on Arc,
@@ -102,6 +96,12 @@ async function submitPoolCall(
   });
 
   const receipt = await bundlerClient.waitForUserOperationReceipt({ hash });
+  // A user operation can be included on-chain while its inner call reverted
+  // (e.g. the pool closed a moment earlier). That's a failed contribution or
+  // refund, not a success — no money moved.
+  if (!receipt.success) {
+    throw new Error(`Transaction reverted: ${receipt.reason ?? "the pool rejected it"}`);
+  }
   return { txHash: receipt.receipt.transactionHash, address: account.address };
 }
 

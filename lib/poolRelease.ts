@@ -1,44 +1,17 @@
-import { formatEther } from "viem";
 import { createCircleClient } from "./circle";
-import { createCircleContractsClient } from "./circleContracts";
 import { convertUsdcToLocal } from "./localFx";
-import { getPoolEscrowAbiJson, getPoolEscrowAddress } from "./poolEscrow";
+import { getPlatformWalletId } from "./platformWallet";
+import { getPoolEscrowAddress, readOnchainPool, type OnchainPool } from "./poolEscrow";
 import { createServiceClient } from "./supabase";
 
-const STATUS_BY_INDEX = ["open", "released", "refunded"] as const;
-
-type ContractsClient = ReturnType<typeof createCircleContractsClient>;
-
-type PoolState = {
-  status: (typeof STATUS_BY_INDEX)[number];
-  currentAmount: string;
-  finalValue: string;
-};
-
-async function readPoolState(
-  contractsClient: ContractsClient,
-  contractAddress: string,
-  abiJson: string,
-  onchainPoolId: string
-): Promise<PoolState> {
-  const stateResponse = await contractsClient.queryContract({
-    address: contractAddress,
-    blockchain: "ARC-TESTNET",
-    abiJson,
-    abiFunctionSignature: "getPool(uint256)",
-    abiParameters: [onchainPoolId],
-  });
-  const [, , currentAmountWei, , statusIndex, finalValueWei] = stateResponse.data?.outputValues ?? [];
-  return {
-    status: STATUS_BY_INDEX[Number(statusIndex)] ?? "open",
-    currentAmount: formatEther(BigInt(currentAmountWei)),
-    finalValue: formatEther(BigInt(finalValueWei)),
-  };
-}
-
-// Syncs Supabase from an on-chain PoolState and returns the client-facing
+// Syncs Supabase from an on-chain pool and returns the client-facing
 // result. Local-currency display is release-only and best-effort.
-async function finalize(poolId: string, targetCurrency: string | null | undefined, state: PoolState, txHash?: string) {
+export async function finalize(
+  poolId: string,
+  targetCurrency: string | null | undefined,
+  state: OnchainPool,
+  txHash?: string
+) {
   const supabase = createServiceClient();
   const update: Record<string, unknown> = { current_amount: state.currentAmount, status: state.status };
   // Persist the release tx so the pool page can link it on the explorer. Only
@@ -53,7 +26,7 @@ async function finalize(poolId: string, targetCurrency: string | null | undefine
   let fxRate: number | undefined;
   if (state.status === "released" && targetCurrency) {
     try {
-      const converted = await convertUsdcToLocal(state.finalValue, targetCurrency);
+      const converted = await convertUsdcToLocal(state.currentAmount, targetCurrency);
       localCurrencyAmount = converted.localAmount;
       fxRate = converted.rate;
       await supabase
@@ -66,33 +39,26 @@ async function finalize(poolId: string, targetCurrency: string | null | undefine
   }
 
   return {
+    currentAmount: state.currentAmount,
     status: state.status,
-    finalValue: state.status !== "open" ? state.finalValue : undefined,
     ...(txHash && { txHash }),
     ...(localCurrencyAmount && { localCurrencyAmount, targetCurrency, fxRate }),
   };
 }
 
-// Calls checkAndRelease on-chain for a single pool, then re-syncs Supabase
-// from the contract's own post-call state (source of truth).
+// Calls checkAndRelease on-chain for a single pool from the platform wallet,
+// then re-syncs Supabase from the contract's own post-call state (source of
+// truth). The platform wallet is only paying gas here: checkAndRelease is
+// permissionless and the contract decides where the money goes.
 //
 // Idempotent by design: if the pool is already terminal (a concurrent poll,
 // the cron, or another viewer released/refunded it first), we skip the
 // transaction entirely; and if the submission itself reverts because we lost
 // that race, we swallow it and just sync the terminal state. This is what
 // keeps overlapping callers from spamming "pool not open" failures.
-export async function checkAndReleasePool(
-  poolId: string,
-  onchainPoolId: string,
-  walletId: string,
-  targetCurrency?: string | null
-) {
-  const contractAddress = getPoolEscrowAddress();
-  const abiJson = getPoolEscrowAbiJson();
-  const contractsClient = createCircleContractsClient();
-
+export async function checkAndReleasePool(poolId: string, onchainPoolId: string, targetCurrency?: string | null) {
   // Don't submit a checkAndRelease against a pool that's no longer open.
-  const pre = await readPoolState(contractsClient, contractAddress, abiJson, onchainPoolId);
+  const pre = await readOnchainPool(onchainPoolId);
   if (pre.status !== "open") {
     return finalize(poolId, targetCurrency, pre);
   }
@@ -101,8 +67,8 @@ export async function checkAndReleasePool(
   try {
     const walletsClient = createCircleClient();
     const txResponse = await walletsClient.createContractExecutionTransaction({
-      walletId,
-      contractAddress,
+      walletId: getPlatformWalletId(),
+      contractAddress: getPoolEscrowAddress(),
       abiFunctionSignature: "checkAndRelease(uint256)",
       abiParameters: [onchainPoolId],
       fee: { type: "level", config: { feeLevel: "MEDIUM" } },
@@ -118,6 +84,7 @@ export async function checkAndReleasePool(
     console.error("checkAndRelease did not complete (syncing on-chain state instead):", err);
   }
 
-  const post = await readPoolState(contractsClient, contractAddress, abiJson, onchainPoolId);
-  return finalize(poolId, targetCurrency, post, txHash);
+  const post = await readOnchainPool(onchainPoolId);
+  // Only link a tx that actually closed the pool.
+  return finalize(poolId, targetCurrency, post, post.status !== "open" ? txHash : undefined);
 }

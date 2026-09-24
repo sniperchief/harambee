@@ -16,7 +16,7 @@ export function SiteFooter() {
           <div className="max-w-xs">
             <Logo href={null} size={30} tone="light" />
             <p className="mt-3 text-sm leading-relaxed text-white/70">
-              Pool together. Grow together. Achieve together. The calm way for groups to reach a shared goal.
+              Pool together. Give together. Achieve together. The calm way for groups to reach a shared goal.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-x-12 gap-y-2 sm:grid-cols-3">

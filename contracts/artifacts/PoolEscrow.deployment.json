@@ -1,4 +1,7 @@
 {
-  "contractId": "019fbde9-6fc9-744c-abea-f90d296bc4bc",
-  "contractAddress": "0x8eeb8ea9fa04ffeb69f1096f3409b5ad44f1bc40"
+  "chainId": 5042,
+  "blockchain": "ARC",
+  "contractId": "01a0d2f4-0f1b-744a-b7f6-0ac5ba0e15bd",
+  "contractAddress": "0x710d18ced3cabb22974b6afc4551849937535424",
+  "txHash": "0xcc7c60d19539cd477d43d005eae0cf60f3bb464a4fb4317594e46299b5f7a43d"
 }

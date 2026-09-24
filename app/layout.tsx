@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Harambee — Pool together. Grow together. Achieve together.",
+  title: "Harambee — Pool together. Give together. Achieve together.",
   description:
-    "Harambee is the calm way for groups to pool money toward a shared goal — held safely, growing while it waits, released the moment you reach your target.",
+    "Harambee is the calm way for groups to pool USDC toward a shared goal — held in escrow, then released or refunded according to the pool's rules.",
 };
 
 export default function RootLayout({

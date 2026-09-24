@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { getSessionUserId } from "@/lib/session";
 import type { Metadata } from "next";
 import { ButtonLink } from "@/components/ui/Button";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
@@ -7,7 +7,7 @@ import { SiteFooter } from "@/components/marketing/SiteFooter";
 export const metadata: Metadata = {
   title: "Documentation — Harambee",
   description:
-    "How Harambee works: the pooling lifecycle, smart-contract escrow, the two-wallet custody model, gasless passkey contributions, and what's real vs. simulated in the demo.",
+    "How Harambee works: the pooling lifecycle, smart-contract escrow, the two-wallet custody model, gasless passkey contributions, and what's live today.",
 };
 
 const TOC = [
@@ -19,7 +19,7 @@ const TOC = [
   { id: "gasless", label: "Gasless contributions" },
   { id: "auth", label: "Passkey authentication" },
   { id: "currency", label: "Local-currency display" },
-  { id: "honesty", label: "Real vs. simulated" },
+  { id: "honesty", label: "What's live" },
   { id: "roadmap", label: "Roadmap" },
 ];
 
@@ -71,8 +71,7 @@ function Callout({
 }
 
 export default async function DocsPage() {
-  const cookieStore = await cookies();
-  const isLoggedIn = !!cookieStore.get("harambee_session")?.value;
+  const isLoggedIn = !!(await getSessionUserId());
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
@@ -87,8 +86,8 @@ export default async function DocsPage() {
           </h1>
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-white/85">
             A technical walkthrough of the whole system — from the smart-contract escrow that holds
-            every pool, to the passkey wallets that fund it, to what&apos;s genuinely live on-chain
-            versus simulated for the demo. Built on Circle&apos;s Arc L1, settled in USDC.
+            every pool, to the passkey wallets that fund it, to what&apos;s live today. Built on
+            Circle&apos;s Arc network, settled in USDC.
           </p>
         </div>
       </div>
@@ -125,9 +124,8 @@ export default async function DocsPage() {
                 <span className="font-semibold text-ink">Harambee</span> — Swahili for &ldquo;all
                 pull together&rdquo; — is group-pooling for money toward a shared goal. Someone
                 creates a pool with a target and a deadline, shares one link, and contributors fund
-                it. Money is held in a smart-contract escrow, earns yield while it waits, and
-                releases automatically to the recipient when the target is met — or refunds everyone
-                if the deadline passes first.
+                it. Money is held in a smart-contract escrow and leaves it only by the pool&apos;s
+                rules: released to the recipient, or refunded to the contributors.
               </p>
               <p>
                 The design goal is that a non-crypto user never has to think about crypto. They sign
@@ -141,10 +139,10 @@ export default async function DocsPage() {
             <p>The system has three layers:</p>
             <ul className="space-y-2">
               <li>
-                <span className="font-semibold text-ink">On-chain (Circle Arc L1 testnet).</span> Two
-                Solidity contracts — <Code>PoolEscrow</Code> and <Code>YieldVault</Code> — hold and
-                move funds. Arc&apos;s native currency <em>is</em> USDC (18 decimals at the protocol
-                level), so pools use native-value transfers, not ERC-20 <Code>transferFrom</Code>.
+                <span className="font-semibold text-ink">On-chain (Arc mainnet).</span> One Solidity
+                contract, <Code>PoolEscrow</Code>, holds and moves funds. Arc&apos;s native currency{" "}
+                <em>is</em> USDC (18 decimals at the protocol level), so pools use native-value
+                transfers, not ERC-20 <Code>transferFrom</Code>.
               </li>
               <li>
                 <span className="font-semibold text-ink">Circle infrastructure.</span> Developer-Controlled
@@ -173,20 +171,16 @@ export default async function DocsPage() {
               <li>
                 <span className="font-semibold text-ink">2. Contribute.</span> Anyone with the link
                 signs in with a passkey and contributes. Each contribution calls{" "}
-                <Code>contribute(poolId)</Code>, which forwards the funds straight into the yield
-                vault and records the contributor.
+                <Code>contribute(poolId)</Code>, which holds the funds in the escrow contract and
+                records the contributor. The server then checks the transaction on-chain before
+                showing it in the pool&apos;s history.
               </li>
               <li>
-                <span className="font-semibold text-ink">3. Wait & earn.</span> While the pool is
-                open, its funds sit in the vault accruing yield against the pool&apos;s aggregate
-                principal.
-              </li>
-              <li>
-                <span className="font-semibold text-ink">4. Release or refund.</span> When the target
-                is hit (or the deadline passes, depending on release mode), the pool withdraws
-                principal + yield from the vault and either releases it to the recipient or freezes it
-                for proportional refunds. The app polls each open pool so deadline-based outcomes fire
-                on their own, with no manual trigger.
+                <span className="font-semibold text-ink">3. Release or refund.</span> When the target
+                is hit (or the deadline passes, depending on release mode), the escrow either releases
+                everything raised to the recipient or marks the pool refundable, so each contributor
+                can take back exactly what they put in. The app checks open pools so deadline-based
+                outcomes fire on their own, with no manual trigger.
               </li>
             </ol>
           </Section>
@@ -198,22 +192,21 @@ export default async function DocsPage() {
             </p>
             <ul className="space-y-2">
               <li>
-                <Code>createPool(target, deadline, recipient)</Code> — opens a pool, returns its id.
+                <Code>createPool(target, deadline, recipient, releaseMode)</Code> — opens a pool and
+                emits its id in <Code>PoolCreated</Code>.
               </li>
               <li>
-                <Code>contribute(poolId)</Code> — payable; adds to the pool total, records{" "}
-                <Code>msg.sender</Code>&apos;s contribution, and forwards the value into the vault.
+                <Code>contribute(poolId)</Code> — payable; adds to the pool total and records{" "}
+                <Code>msg.sender</Code>&apos;s contribution. The funds stay in the contract.
               </li>
               <li>
                 <Code>checkAndRelease(poolId)</Code> — permissionless; enforces the release rule
-                (target met, or deadline passed), pulls funds back from the vault, and either releases
-                to the recipient or flips the pool to refundable.
+                (target met, or deadline passed) and either pays everything raised to the recipient or
+                flips the pool to refundable.
               </li>
               <li>
-                <Code>refund(poolId)</Code> — pull-based; each contributor claims their principal plus
-                a proportional share of accrued yield, computed as{" "}
-                <Code>principal × finalValue / totalPrincipal</Code> using integer math (no float
-                rounding).
+                <Code>refund(poolId)</Code> — pull-based; once a pool is refundable, each contributor
+                claims back exactly what they contributed, once.
               </li>
             </ul>
             <p>
@@ -222,10 +215,8 @@ export default async function DocsPage() {
               deadline beats it), or at the deadline only.
             </p>
             <p>
-              <span className="font-semibold text-ink">YieldVault</span> holds contributed funds and
-              accrues linear interest at a fixed rate, keyed by pool id. <Code>PoolEscrow</Code> is
-              its only caller: it deposits on <Code>contribute</Code> and withdraws the full position
-              (principal + yield) on release/refund.
+              The contract has no owner and no admin functions: nobody, including Harambee, can move
+              funds except through these rules.
             </p>
           </Section>
 
@@ -281,7 +272,7 @@ export default async function DocsPage() {
             <p>
               Sign-in is server-verified WebAuthn. The browser requests a fresh, single-use challenge
               from the server, the passkey signs it with one biometric prompt, and the server verifies
-              the signature before issuing a session. There is no password to steal and no seed phrase
+              the signature before issuing a signed session cookie. There is no password to steal and no seed phrase
               to write down — the passkey never leaves the device.
             </p>
           </Section>
@@ -296,14 +287,14 @@ export default async function DocsPage() {
               This number does not move real fiat. Settlement stays in USDC. Circle&apos;s StableFX
               was investigated for a true conversion and ruled out: it only swaps USDC↔EURC between
               KYB-onboarded institutional counterparties, with no fiat leg — so it can&apos;t produce a
-              local-currency payout. A real off-ramp is a mainnet-gated roadmap item.
+              local-currency payout. A real off-ramp is a roadmap item.
             </Callout>
           </Section>
 
-          <Section id="honesty" title="Real vs. simulated" eyebrow="Transparency">
+          <Section id="honesty" title="What's live" eyebrow="Transparency">
             <p>
-              In the spirit of the escrow itself, here&apos;s exactly what is genuinely live on-chain
-              versus stood in for the demo:
+              In the spirit of the escrow itself, here&apos;s exactly what is live and what
+              isn&apos;t:
             </p>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] border-collapse text-left text-[14px]">
@@ -316,11 +307,10 @@ export default async function DocsPage() {
                 </thead>
                 <tbody className="text-muted">
                   {[
-                    ["Escrow, contribute, release, refund", "Real", "Live on Arc testnet, end-to-end."],
+                    ["Escrow, contribute, release, refund", "Real", "Live on Arc mainnet with real USDC."],
                     ["Passkey wallets + gasless txs", "Real", "Self-custodial ERC-4337 + Gas Station."],
-                    ["Yield vault", "Simulated", "Fixed invented APY, stands in for Morpho; needs manual reserve top-ups to pay out."],
-                    ["Local-currency amount", "Simulated", "Live public FX rate, display-only — not StableFX, not a payout."],
-                    ["Credit-card contributions", "Roadmap", "Impossible on testnet; mainnet-gated."],
+                    ["Local-currency amount", "Display only", "Live public FX rate, informational — not StableFX, not a payout."],
+                    ["Credit-card contributions", "Roadmap", "Not built yet."],
                     ["Fiat off-ramp to bank/mobile money", "Roadmap", "No provider supports Arc yet."],
                   ].map(([cap, status, notes]) => (
                     <tr key={cap} className="border-b border-line align-top">
@@ -330,7 +320,7 @@ export default async function DocsPage() {
                           className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
                             status === "Real"
                               ? "bg-success-50 text-success"
-                              : status === "Simulated"
+                              : status === "Display only"
                                 ? "bg-warning-50 text-warning"
                                 : "bg-surface-2 text-muted"
                           }`}
@@ -347,27 +337,21 @@ export default async function DocsPage() {
           </Section>
 
           <Section id="roadmap" title="Roadmap" eyebrow="What's next">
-            <p>The clearest next milestones, most gated on Arc reaching mainnet:</p>
+            <p>The clearest next milestones:</p>
             <ul className="space-y-2">
               <li>
                 <span className="font-semibold text-ink">Credit-card contributions.</span> Let
-                non-crypto users chip in with a card. This can&apos;t exist on testnet — a real charge
-                needs real value on the other side. On mainnet: a card payment on-ramp mints USDC, the
-                platform routes it into the pool on the contributor&apos;s behalf (custodial), and
-                their share is tracked off-chain. This is the custody fork described above.
+                non-crypto users chip in with a card: a card payment on-ramp mints USDC, the platform
+                routes it into the pool on the contributor&apos;s behalf (custodial), and their share is
+                tracked off-chain. This is the custody fork described above.
               </li>
               <li>
-                <span className="font-semibold text-ink">Real yield.</span> Replace the stand-in vault
-                with a live lending protocol (Morpho is the closest structural match), so yield is a
-                real market rate rather than a funded reserve.
+                <span className="font-semibold text-ink">Fiat off-ramp.</span> Once off-ramp providers
+                support Arc (Yellow Card, Kotani Pay, and similar cover African bank + mobile-money
+                rails), a recipient could cash out to local currency directly.
               </li>
               <li>
-                <span className="font-semibold text-ink">Fiat off-ramp.</span> Once Arc is on mainnet
-                and off-ramp providers support it (Yellow Card, Kotani Pay, and similar cover African
-                bank + mobile-money rails), a recipient could cash out to local currency directly.
-              </li>
-              <li>
-                <span className="font-semibold text-ink">Production hardening.</span> Signed/expiring
+                <span className="font-semibold text-ink">Production hardening.</span> Expiring
                 sessions, event-driven release triggers, and per-contributor bookkeeping for the
                 custodial lane.
               </li>
