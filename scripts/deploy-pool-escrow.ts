@@ -4,21 +4,17 @@ config({ path: ".env.local" });
 import * as fs from "fs";
 import * as path from "path";
 import { createCircleContractsClient } from "../lib/circleContracts";
+import { ARC_CHAIN_ID, CIRCLE_BLOCKCHAIN } from "../lib/network";
 
-// Usage: npm run contracts:deploy-pool-escrow -- <walletId>
-// walletId must be a Developer-Controlled Wallet with a native testnet
-// balance to cover deployment gas (e.g. the funded Wallet A from Step 5).
-// Requires YIELD_VAULT_CONTRACT_ADDRESS in .env.local (deploy the vault
-// first via npm run contracts:deploy-yield-vault).
+// Usage: npm run contracts:deploy-pool-escrow [-- <walletId>]
+// Deploys contracts/artifacts/PoolEscrow.json to Arc MAINNET through Circle
+// Contracts. walletId defaults to HARAMBEE_PLATFORM_WALLET_ID and must be a
+// Developer-Controlled wallet on ARC holding a little USDC for gas. Run
+// `npm run contracts:compile-pool-escrow` and `npm run test:contracts` first.
 async function main() {
-  const walletId = process.argv[2];
+  const walletId = process.argv[2] ?? process.env.HARAMBEE_PLATFORM_WALLET_ID;
   if (!walletId) {
-    throw new Error("Usage: npm run contracts:deploy-pool-escrow -- <walletId>");
-  }
-
-  const vaultAddress = process.env.YIELD_VAULT_CONTRACT_ADDRESS;
-  if (!vaultAddress) {
-    throw new Error("Missing YIELD_VAULT_CONTRACT_ADDRESS in .env.local — deploy the vault first");
+    throw new Error("Usage: npm run contracts:deploy-pool-escrow -- <walletId> (or set HARAMBEE_PLATFORM_WALLET_ID)");
   }
 
   const artifactPath = path.join(__dirname, "../contracts/artifacts/PoolEscrow.json");
@@ -30,10 +26,9 @@ async function main() {
     name: "PoolEscrow",
     description: "Harambee pool escrow contract",
     walletId,
-    blockchain: "ARC-TESTNET",
+    blockchain: CIRCLE_BLOCKCHAIN,
     abiJson: JSON.stringify(artifact.abi),
     bytecode: artifact.bytecode,
-    constructorParameters: [vaultAddress],
     fee: { type: "level", config: { feeLevel: "MEDIUM" } },
   });
 
@@ -46,12 +41,14 @@ async function main() {
   console.log("Waiting for confirmation...");
 
   let contractAddress: string | undefined;
-  for (let i = 0; i < 30; i++) {
+  let txHash: string | undefined;
+  for (let i = 0; i < 60; i++) {
     const contractResponse = await client.getContract({ id: contractId });
     const contract = contractResponse.data?.contract;
 
     if (contract?.status === "COMPLETE") {
       contractAddress = contract.contractAddress;
+      txHash = contract.txHash;
       break;
     }
     if (contract?.status === "FAILED") {
@@ -67,12 +64,18 @@ async function main() {
   }
 
   console.log("Deployed! Contract address:", contractAddress);
-  console.log("Add this to .env.local:");
+  console.log("Set this in the environment:");
   console.log(`POOL_ESCROW_CONTRACT_ADDRESS=${contractAddress}`);
+  console.log("Verify on the explorer with:");
+  console.log(`npx hardhat verify --network arc ${contractAddress}`);
 
   fs.writeFileSync(
     path.join(__dirname, "../contracts/artifacts/PoolEscrow.deployment.json"),
-    JSON.stringify({ contractId, contractAddress }, null, 2)
+    JSON.stringify(
+      { chainId: ARC_CHAIN_ID, blockchain: CIRCLE_BLOCKCHAIN, contractId, contractAddress, txHash },
+      null,
+      2
+    )
   );
 }
 

@@ -1,4 +1,5 @@
 import { createCircleContractsClient } from "./circleContracts";
+import { CIRCLE_BLOCKCHAIN } from "./network";
 import { getPoolEscrowAbiJson, getPoolEscrowAddress } from "./poolEscrow";
 
 // A contributor's remaining on-chain contribution for a pool. After a refund is
@@ -12,7 +13,7 @@ export async function getOnchainContribution(
     const client = createCircleContractsClient();
     const res = await client.queryContract({
       address: getPoolEscrowAddress(),
-      blockchain: "ARC-TESTNET",
+      blockchain: CIRCLE_BLOCKCHAIN,
       abiJson: getPoolEscrowAbiJson(),
       abiFunctionSignature: "contributions(uint256,address)",
       abiParameters: [onchainPoolId, address],

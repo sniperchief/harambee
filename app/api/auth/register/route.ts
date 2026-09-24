@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
-import { sessionCookieOptions } from "@/lib/authCookie";
+import { SESSION_COOKIE, createSessionValue, sessionCookieOptions } from "@/lib/authCookie";
 
 export async function POST(request: NextRequest) {
   const { credentialId, address, publicKey } = await request.json();
@@ -35,6 +35,6 @@ export async function POST(request: NextRequest) {
   }
 
   const response = NextResponse.json({ userId: user.id, address });
-  response.cookies.set("harambee_session", user.id, sessionCookieOptions());
+  response.cookies.set(SESSION_COOKIE, createSessionValue(user.id), sessionCookieOptions());
   return response;
 }

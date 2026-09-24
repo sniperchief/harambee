@@ -147,7 +147,7 @@ export function CreatePoolForm() {
         </span>
         <h2 className="mt-5 text-2xl font-bold tracking-tight text-navy">Your pool is live</h2>
         <p className="mx-auto mt-2 max-w-sm text-[15px] text-muted">
-          Share it to start collecting. Funds are held safely in escrow and begin earning yield right away.
+          Share it to start collecting. Every contribution is held safely in escrow until the pool&apos;s rules are met.
         </p>
 
         {/* Preview of the pool just created */}

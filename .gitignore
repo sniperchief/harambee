@@ -46,7 +46,7 @@ PROGRESS.md
 /recovery/
 recovery_file_*.dat
 
-# Hardhat build output (dev-only toolchain for yield vault time-travel tests)
+# Hardhat build output (local contract tests + explorer verification)
 /artifacts/
 /cache/
 /typechain-types/

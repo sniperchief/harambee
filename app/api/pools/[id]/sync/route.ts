@@ -22,6 +22,11 @@ export async function POST(
     return NextResponse.json({ error: "Pool not found" }, { status: 404 });
   }
 
-  const result = await syncPoolFromChain(poolId, pool.onchain_pool_id, pool.target_currency);
-  return NextResponse.json(result);
+  try {
+    const result = await syncPoolFromChain(poolId, pool.onchain_pool_id, pool.target_currency);
+    return NextResponse.json(result);
+  } catch (err) {
+    console.error("Pool sync failed:", err);
+    return NextResponse.json({ error: "Could not read the pool on-chain" }, { status: 502 });
+  }
 }

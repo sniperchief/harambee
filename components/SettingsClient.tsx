@@ -33,7 +33,7 @@ export function WalletCard({ address }: { address: string | null }) {
             </p>
           )}
         </div>
-        <p className="mt-1.5 text-xs text-muted">Testnet USDC</p>
+        <p className="mt-1.5 text-xs text-muted">USDC</p>
       </div>
 
       <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
@@ -55,16 +55,12 @@ export function WalletCard({ address }: { address: string | null }) {
         >
           {copied ? "Copied" : `Copy ${address ? shortAddress(address) : ""}`}
         </button>
-        <a
-          href="https://faucet.circle.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3.5 text-sm font-semibold text-ink hover:border-line-strong hover:bg-surface-2"
-        >
-          Add test funds
-        </a>
       </div>
       </div>
+      <p className="text-xs text-muted">
+        To add funds, send USDC on the Arc network to this address. Sending other tokens, or USDC on
+        another network, won&apos;t arrive.
+      </p>
     </div>
   );
 }

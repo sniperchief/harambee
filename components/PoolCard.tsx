@@ -20,14 +20,6 @@ export type PoolSummary = {
   contributor_count?: number;
 };
 
-function LeafIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
-      <path d="M2 21c0-3 1.85-5.36 5.08-6" />
-    </svg>
-  );
-}
 function UsersIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -109,20 +101,14 @@ export function PoolCard({ pool }: { pool: PoolSummary }) {
             {count} {count === 1 ? "contributor" : "contributors"}
           </span>
           {isOpen ? (
-            <span className="inline-flex items-center gap-1.5 text-success">
-              <LeafIcon />
-              Earning yield
+            <span className={`inline-flex items-center gap-1.5 ${time.urgent ? "text-warning" : "text-white/60"}`}>
+              <ClockIcon />
+              {time.label}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5">
               <ClockIcon />
               {status.label}
-            </span>
-          )}
-          {isOpen && (
-            <span className={`inline-flex items-center gap-1.5 ${time.urgent ? "text-warning" : "text-white/60"}`}>
-              <ClockIcon />
-              {time.label}
             </span>
           )}
         </div>
