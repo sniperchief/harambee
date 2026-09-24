@@ -5,6 +5,7 @@ import {
   toCircleSmartAccount,
   WebAuthnMode,
 } from "@circle-fin/modular-wallets-core";
+import { withStep } from "./authErrors";
 import { getModularClients } from "./modularWalletConfig";
 
 // Browser-only: WebAuthn requires a real window/navigator.credentials context.
@@ -20,13 +21,17 @@ async function credentialToAddress(
 }
 
 export async function registerPasskey(username: string) {
-  const { passkeyTransport, publicClient } = getClients();
-  const credential = await toWebAuthnCredential({
-    transport: passkeyTransport,
-    mode: WebAuthnMode.Register,
-    username,
-  });
-  const { address, credentialId } = await credentialToAddress(credential, publicClient);
+  const { passkeyTransport, publicClient } = await withStep("wallet setup", async () => getClients());
+  const credential = await withStep("create passkey", () =>
+    toWebAuthnCredential({
+      transport: passkeyTransport,
+      mode: WebAuthnMode.Register,
+      username,
+    })
+  );
+  const { address, credentialId } = await withStep("get wallet address", () =>
+    credentialToAddress(credential, publicClient)
+  );
   // publicKey is captured so the server can verify future login signatures
   // against it — see lib/authChallenge.ts and /api/auth/login.
   return { address, credentialId, publicKey: credential.publicKey };

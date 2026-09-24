@@ -1,3 +1,40 @@
+// Runs one step of a sign-in/sign-up flow and, if it fails, tags the error
+// with the step's name so technicalDetail() can say where things broke. The
+// original error object is rethrown unchanged otherwise (friendlyPasskeyError
+// still sees its name/message).
+export async function withStep<T>(step: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    const tagged = err instanceof Error ? err : new Error(String(err));
+    (tagged as Error & { step?: string }).step ??= step;
+    throw tagged;
+  }
+}
+
+// A short, technical description of an error for support/debugging: the step
+// that failed plus the error chain (viem/Circle errors nest their causes).
+// Shown in small print under the friendly message and logged to the console.
+export function technicalDetail(err: unknown): string {
+  const step = err instanceof Error ? (err as Error & { step?: string }).step : undefined;
+  const parts: string[] = [];
+  let current: unknown = err;
+  for (let depth = 0; current && depth < 4; depth++) {
+    if (current instanceof Error) {
+      const e = current as Error & { shortMessage?: string; details?: string };
+      const text = [e.shortMessage ?? e.message, e.details].filter(Boolean).join(" — ");
+      parts.push(`${e.name}: ${text}`);
+      current = e.cause;
+    } else {
+      parts.push(String(current));
+      break;
+    }
+  }
+  const detail = parts.join(" ← ").replace(/\s+/g, " ");
+  const full = step ? `[${step}] ${detail}` : detail;
+  return full.length > 400 ? `${full.slice(0, 400)}…` : full;
+}
+
 // Turns raw WebAuthn / Circle / server errors into messages a person can act
 // on. `cancelled` means the user simply dismissed the passkey prompt — that's
 // a normal choice, not a failure, so callers should show it gently (or not at

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { assertPasskey } from "@/lib/modularWallet";
-import { friendlyPasskeyError } from "@/lib/authErrors";
+import { friendlyPasskeyError, technicalDetail, withStep } from "@/lib/authErrors";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/Button";
 
@@ -27,35 +27,46 @@ function LoginForm() {
   const next = useSearchParams().get("next") ?? "/dashboard";
   const [status, setStatus] = useState<"idle" | "working">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   async function handleLogin() {
     setStatus("working");
     setErrorMsg(null);
+    setErrorDetail(null);
     try {
       // 1. Get a fresh, single-use challenge from the server.
-      const challengeRes = await fetch("/api/auth/challenge");
-      const { challenge } = await challengeRes.json();
-      if (!challenge) throw new Error("Could not start sign-in");
+      const challenge = await withStep("start sign-in", async () => {
+        const challengeRes = await fetch("/api/auth/challenge");
+        const body = await challengeRes.json().catch(() => ({}));
+        if (!body.challenge) throw new Error(`Could not start sign-in (HTTP ${challengeRes.status})`);
+        return body.challenge as `0x${string}`;
+      });
 
       // 2. Sign it with the passkey (one biometric prompt).
-      const { credentialId, signature, webauthn } = await assertPasskey(challenge);
+      const { credentialId, signature, webauthn } = await withStep("use passkey", () => assertPasskey(challenge));
 
       // 3. Server verifies the signature before issuing a session.
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credentialId, challenge, signature, webauthn }),
+      await withStep("verify sign-in", async () => {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credentialId, challenge, signature, webauthn }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.error ?? `Login failed (HTTP ${response.status})`);
+        }
       });
-      if (!response.ok) {
-        const body = await response.json();
-        throw new Error(body.error ?? "Login failed");
-      }
       router.push(next);
     } catch (err) {
       const { cancelled, message } = friendlyPasskeyError(err);
       setStatus("idle");
       // Cancelling the passkey prompt is normal — show nothing, just reset.
-      if (!cancelled) setErrorMsg(message);
+      if (!cancelled) {
+        console.error("Sign-in failed:", err);
+        setErrorMsg(message);
+        setErrorDetail(technicalDetail(err));
+      }
     }
   }
 
@@ -74,9 +85,14 @@ function LoginForm() {
       </Button>
 
       {errorMsg && (
-        <p className="mt-4 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger">
-          {errorMsg}
-        </p>
+        <div className="mt-4 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger">
+          <p>{errorMsg}</p>
+          {errorDetail && (
+            <p className="mt-1.5 break-words font-mono text-[11px] font-normal leading-snug text-danger/80">
+              Details: {errorDetail}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="mt-6 rounded-[12px] border border-line bg-surface-2 px-4 py-3 text-sm text-muted">

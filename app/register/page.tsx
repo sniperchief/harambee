@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { registerPasskey } from "@/lib/modularWallet";
-import { friendlyPasskeyError } from "@/lib/authErrors";
+import { friendlyPasskeyError, technicalDetail, withStep } from "@/lib/authErrors";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
@@ -30,6 +30,7 @@ function RegisterForm() {
   const [touched, setTouched] = useState(false);
   const [status, setStatus] = useState<"idle" | "working">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   // Circle accepts 5–50 chars from [A-Za-z0-9_@.:+-]; we cap at 15 for tidier
   // usernames (a stricter subset Circle still accepts).
@@ -52,23 +53,30 @@ function RegisterForm() {
     if (!usernameValid) return;
     setStatus("working");
     setErrorMsg(null);
+    setErrorDetail(null);
     try {
       const { credentialId, address, publicKey } = await registerPasskey(trimmed);
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credentialId, address, publicKey }),
+      await withStep("save account", async () => {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credentialId, address, publicKey }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.error ?? `Registration failed (HTTP ${response.status})`);
+        }
       });
-      if (!response.ok) {
-        const body = await response.json();
-        throw new Error(body.error ?? "Registration failed");
-      }
       router.push(next);
     } catch (err) {
       const { cancelled, message } = friendlyPasskeyError(err);
       setStatus("idle");
       // Cancelling the passkey prompt is normal — show nothing, just reset.
-      if (!cancelled) setErrorMsg(message);
+      if (!cancelled) {
+        console.error("Registration failed:", err);
+        setErrorMsg(message);
+        setErrorDetail(technicalDetail(err));
+      }
     }
   }
 
@@ -109,9 +117,14 @@ function RegisterForm() {
         </Button>
 
         {errorMsg && (
-          <p className="rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger">
-            {errorMsg}
-          </p>
+          <div className="rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger">
+            <p>{errorMsg}</p>
+            {errorDetail && (
+              <p className="mt-1.5 break-words font-mono text-[11px] font-normal leading-snug text-danger/80">
+                Details: {errorDetail}
+              </p>
+            )}
+          </div>
         )}
       </form>
 
