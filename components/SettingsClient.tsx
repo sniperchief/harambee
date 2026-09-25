@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { shortAddress, formatUsdc } from "@/lib/format";
 import { useWalletBalance } from "@/lib/useWalletBalance";
 import { PillButton } from "@/components/design/PillButton";
 import { StatCallout } from "@/components/design/StatCallout";
 import { WarmCard } from "@/components/design/Card";
+import { FieldShell, InputField } from "@/components/design/InputField";
+import { usernameProblem } from "@/lib/username";
 
 // Pill-shaped switch: ink when on, Oat when off.
 function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
@@ -92,5 +95,80 @@ export function NotificationToggles() {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Set or change the username shown in the greeting and account chip. */
+export function UsernameForm({ current }: { current: string | null }) {
+  const router = useRouter();
+  const [value, setValue] = useState(current ?? "");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  const trimmed = value.trim();
+  const unchanged = trimmed === (current ?? "");
+  // Live character check; the length rule waits until they try to save.
+  const charProblem = trimmed && /[^A-Za-z0-9_@.:+-]/.test(trimmed) ? usernameProblem(trimmed) : null;
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    const problem = usernameProblem(trimmed);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setStatus("saving");
+    setError(null);
+    try {
+      const r = await fetch("/api/username", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: trimmed }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(body.error ?? "Couldn't save your username. Please try again.");
+      setStatus("saved");
+      router.refresh(); // greeting + account chip pick up the new name
+    } catch (err) {
+      setStatus("idle");
+      setError(err instanceof Error ? err.message : "Couldn't save your username. Please try again.");
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="flex flex-col gap-4">
+      <FieldShell
+        label="Username"
+        htmlFor="username"
+        hint={current ? "5–15 characters. Shown in your greeting." : "You haven't picked one yet — 5–15 characters."}
+        error={error ?? charProblem ?? undefined}
+      >
+        <InputField
+          id="username"
+          value={value}
+          placeholder="e.g. amara_o"
+          maxLength={15}
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          aria-invalid={!!(error || charProblem)}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setError(null);
+            setStatus("idle");
+          }}
+        />
+      </FieldShell>
+      <div className="flex items-center gap-4">
+        <PillButton type="submit" variant="black" compact disabled={unchanged || status === "saving" || !!charProblem}>
+          {status === "saving" ? "Saving…" : "Save username"}
+        </PillButton>
+        {status === "saved" && (
+          <span role="status" className="text-sm">
+            Saved.
+          </span>
+        )}
+      </div>
+    </form>
   );
 }

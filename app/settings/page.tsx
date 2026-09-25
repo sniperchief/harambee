@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { TopNav } from "@/components/TopNav";
-import { WalletCard, NotificationToggles } from "@/components/SettingsClient";
+import { WalletCard, NotificationToggles, UsernameForm } from "@/components/SettingsClient";
 import { Section, SectionDivider } from "@/components/design/Section";
 import { SurfaceCard } from "@/components/design/Card";
 import { Tag } from "@/components/design/Tag";
@@ -41,8 +41,11 @@ export default async function SettingsPage() {
 
           <div className="mt-12 space-y-12">
             <Group title="Profile" description="How you appear to people you pool with.">
-              <p className="type-mono">{shortAddress(user.modular_wallet_address) || "Member"}</p>
-              <p className="mt-2 text-body text-char">Joined {formatDate(user.created_at)}</p>
+              <UsernameForm current={name} />
+              <p className="mt-6 border-t border-oat pt-5 text-body text-char">
+                <span className="font-dm-mono text-ink-black">{shortAddress(user.modular_wallet_address) || "—"}</span>
+                {" · "}Joined {formatDate(user.created_at)}
+              </p>
             </Group>
 
             <Group title="Wallet" description="Your self-custodial smart wallet, secured by your passkey.">

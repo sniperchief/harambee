@@ -6,6 +6,8 @@ export type SessionUser = {
   id: string;
   modular_wallet_address: string | null;
   passkey_credential_id: string | null;
+  /** Chosen at sign-up (or in Settings). Absent on older accounts / before the 0008 migration. */
+  username?: string | null;
   created_at: string;
 };
 
@@ -25,7 +27,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   return (data as SessionUser) ?? null;
 }
 
-/** A friendly display handle for a user, derived from their wallet. */
-export function displayName(user: { modular_wallet_address: string | null }): string {
-  return user.modular_wallet_address ?? "Member";
+/** The user's chosen username, or null if they haven't set one. Never the wallet address. */
+export function displayName(user: { username?: string | null }): string | null {
+  return user.username?.trim() || null;
 }
