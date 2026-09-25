@@ -18,6 +18,7 @@ function RegisterForm() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   // Set when the server says the name is taken; cleared as soon as it's edited.
   const [takenMsg, setTakenMsg] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
 
   const trimmed = username.trim();
   const usernameValid = isValidUsername(trimmed);
@@ -37,7 +38,7 @@ function RegisterForm() {
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
-    if (!usernameValid) return;
+    if (!usernameValid || !agreed) return;
     setStatus("working");
     setErrorMsg(null);
 
@@ -79,14 +80,7 @@ function RegisterForm() {
       eyebrow="Get started"
       title="Create account"
       lead="A passkey and a name — that’s all it takes. Your wallet is created for you."
-      after={
-        <>
-          {errorMsg && <FormMessage className="mt-6">{errorMsg}</FormMessage>}
-          <p className="mt-6 text-center text-sm text-char">
-            By continuing you agree that funds are held in smart-contract escrow and released only when a pool&apos;s conditions are met.
-          </p>
-        </>
-      }
+      after={errorMsg && <FormMessage className="mt-6">{errorMsg}</FormMessage>}
     >
       <form onSubmit={handleRegister} className="flex flex-col gap-4">
         <FieldShell
@@ -114,9 +108,21 @@ function RegisterForm() {
           />
         </FieldShell>
 
+        <label className="flex cursor-pointer items-start gap-3 text-sm text-char">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer accent-ink-black"
+          />
+          <span>
+            I agree that funds are held in smart-contract escrow and released only when a pool&apos;s conditions are met.
+          </span>
+        </label>
+
         <PillButton
           type="submit"
-          disabled={!usernameValid || status === "working"}
+          disabled={!usernameValid || !agreed || status === "working"}
           block
           className="mt-2 !border-ink-black"
         >

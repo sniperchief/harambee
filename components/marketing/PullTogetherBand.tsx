@@ -19,7 +19,7 @@ function Run({ hidden = false }: { hidden?: boolean }) {
 export function PullTogetherBand() {
   return (
     <section aria-label="Harambee — all pull together" className="overflow-hidden bg-ink-black text-bone-white">
-      <div className="flex w-max animate-marquee py-6 font-champ text-[clamp(96px,17vw,240px)] font-extrabold leading-[0.95] tracking-[0.01em] -translate-x-[4%]">
+      <div className="flex w-max animate-marquee py-6 font-champ text-[clamp(96px,17vw,240px)] font-extrabold leading-[0.95] tracking-[-0.02em] -translate-x-[4%]">
         <Run />
         <Run hidden />
       </div>

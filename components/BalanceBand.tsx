@@ -1,12 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createOnrampKit, type OnrampSession } from "@circle-fin/onramp-kit";
 import { useWalletBalance } from "@/lib/useWalletBalance";
-import { formatUsdc } from "@/lib/format";
+import { X } from "lucide-react";
+import { formatUsdc, shortAddress } from "@/lib/format";
+import { QRCodeSVG } from "qrcode.react";
 import { PillButton } from "@/components/design/PillButton";
+import { Tag } from "@/components/design/Tag";
 
 type Minted = { session: OnrampSession; widgetBaseUrl: string };
+
+// Phones get a bottom sheet instead of the inline panel.
+const MOBILE = "(max-width: 639px)";
+function subscribeMobile(onChange: () => void) {
+  const mq = window.matchMedia(MOBILE);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+function useIsMobile(): boolean {
+  return useSyncExternalStore(subscribeMobile, () => window.matchMedia(MOBILE).matches, () => false);
+}
 type Widget = { close(): void };
 
 // Why a purchase stopped, in words a contributor can act on. Codes the widget
@@ -21,9 +35,11 @@ const NOT_COMPLETED: Record<string, string> = {
 };
 
 // The dashboard's money surface: an ink panel with the available balance as a
-// large DM Mono figure. "Add funds" offers two ways in: buy USDC by bank
-// transfer through Circle's Arc Onramp (opens as a popup; the USDC lands in
-// this wallet), or copy the wallet address and send USDC on Arc yourself.
+// large DM Mono figure. "Add funds" opens two ways in. The main one is sending
+// USDC on Arc to this wallet (QR code + address). The other is buying USDC by
+// bank transfer through Circle's Arc Onramp, which opens as a popup (a new tab
+// on phones) and delivers to this wallet. On desktop the options open inline;
+// on phones, in a bottom sheet with just the address, Copy and bank transfer.
 export function BalanceBand({ address }: { address: string | null }) {
   const { balance, loading, refresh } = useWalletBalance();
   const [open, setOpen] = useState(false);
@@ -35,6 +51,8 @@ export function BalanceBand({ address }: { address: string | null }) {
   const [inline, setInline] = useState(false);
   const widgetRef = useRef<Widget | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const mobile = useIsMobile();
+  const sheet = open && !!address && mobile;
 
   // Sessions are minted ahead of the click: the popup must open synchronously
   // inside the click handler or the browser blocks it.
@@ -55,6 +73,35 @@ export function BalanceBand({ address }: { address: string | null }) {
   }, []);
 
   useEffect(() => () => widgetRef.current?.close(), []);
+
+  // Funding happens in another app or tab (an exchange, the bank-transfer
+  // widget), so re-read the balance whenever the user comes back.
+  useEffect(() => {
+    const onReturn = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", onReturn);
+    return () => {
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", onReturn);
+    };
+  }, [refresh]);
+
+  // Bottom sheet: lock the page behind it and close on Escape.
+  useEffect(() => {
+    if (!sheet) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [sheet]);
 
   const callbacks = useCallback(
     () => ({
@@ -93,7 +140,7 @@ export function BalanceBand({ address }: { address: string | null }) {
       // About to expire: fetch a new one; the next click opens it.
       setMinted(null);
       mint();
-      setStatus("Refreshed your session. Tap “Buy with bank transfer” again.");
+      setStatus("Refreshed your session. Tap “Buy USDC” again.");
       return;
     }
     setStatus("");
@@ -107,6 +154,16 @@ export function BalanceBand({ address }: { address: string | null }) {
       mint();
     } else if (result.reason === "popup_blocked") {
       setStatus("Your browser blocked the popup. Allow popups for this site and try again.");
+    } else if (mobile) {
+      // In-app browsers / installed apps on a phone: open the widget in its
+      // own tab. No events come back; the balance refreshes on return.
+      const tab = minted.session.widgetUrl ? window.open(minted.session.widgetUrl, "_blank", "noopener") : null;
+      if (tab) {
+        setMinted(null);
+        mint();
+      } else {
+        setStatus("Couldn't open a new tab. Open Harambee in your phone's browser and try again.");
+      }
     } else {
       // In-app browsers and installed apps can't use popups: show it inline.
       setInline(true);
@@ -129,9 +186,10 @@ export function BalanceBand({ address }: { address: string | null }) {
     try {
       await navigator.clipboard.writeText(address);
       setCopy("copied");
+      setTimeout(() => setCopy("idle"), 2000);
     } catch {
-      // Clipboard blocked (permissions / insecure context): show the address
-      // so it can be copied by hand.
+      // Clipboard blocked (permissions / insecure context): the address is
+      // on screen, so it can be selected by hand.
       setCopy("failed");
     }
   }
@@ -160,54 +218,124 @@ export function BalanceBand({ address }: { address: string | null }) {
             disabled={!address}
             aria-expanded={open}
           >
-            {open ? "Close" : "Add funds"}
+            {open && !mobile ? "Close" : "Add funds"}
           </PillButton>
         </div>
       </div>
 
-      {open && address && (
-        <div className="mt-8 grid gap-6 border-t border-bone-white/15 pt-6 md:grid-cols-2">
-          <div className="flex flex-col items-start gap-3">
-            <p className="text-body font-medium">Buy with bank transfer</p>
-            <p className="text-sm text-bone-white/80">
-              Pay from your bank account and the USDC arrives in this wallet on Arc. Available in select US states and EU
-              countries; the provider checks your ID the first time.
-            </p>
-            {mintError ? (
-              <>
-                <p className="text-sm text-bone-white">{mintError}</p>
-                <PillButton variant="outlined-light" compact onClick={mint}>
-                  Try again
+      {open && address && !mobile && (
+        <div className="mt-8 flex flex-col gap-4 border-t border-bone-white/15 pt-6 animate-fade-in">
+          {/* Primary: send USDC on Arc to this wallet. */}
+          <div className="flex flex-col gap-6 rounded-2xl bg-bone-white p-5 text-ink-black sm:flex-row sm:items-center sm:p-6">
+            <div className="shrink-0 self-center rounded-2xl border-[1.5px] border-ink-black bg-bone-white p-3">
+              <QRCodeSVG value={address} size={128} fgColor="#000000" bgColor="#ffffff" level="M" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-body font-medium">Send USDC to your wallet</p>
+                <Tag tone="marigold" small>
+                  Arc network
+                </Tag>
+              </div>
+              <p className="mt-3 select-all break-all rounded-xl bg-buttercream px-4 py-3 font-dm-mono text-sm leading-relaxed">
+                {address}
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <PillButton variant="marigold" compact onClick={copyAddress}>
+                  {copy === "copied" ? "Address copied" : "Copy address"}
                 </PillButton>
-              </>
+                <p aria-live="polite" className="text-sm text-char">
+                  {copy === "failed"
+                    ? "Couldn't copy. Select the address above instead."
+                    : "Only USDC on Arc. Other tokens or networks won't arrive."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Secondary: buy with a bank transfer through Arc Onramp. */}
+          <div className="flex flex-col gap-3 rounded-2xl border border-bone-white/20 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="min-w-0">
+              <p className="text-body font-medium">No USDC yet? Buy with a bank transfer</p>
+              <p className="mt-1 text-sm text-bone-white/70">
+                {mintError ||
+                  "Available in select US states and EU countries. The provider checks your ID on your first purchase."}
+              </p>
+            </div>
+            {mintError ? (
+              <PillButton variant="outlined-light" compact className="shrink-0" onClick={mint}>
+                Try again
+              </PillButton>
             ) : (
-              <PillButton variant="outlined-light" compact onClick={buy} disabled={!minted}>
-                {minting ? "Preparing…" : "Buy with bank transfer"}
+              <PillButton variant="outlined-light" compact className="shrink-0" onClick={buy} disabled={!minted}>
+                {minting ? "Preparing…" : "Buy USDC"}
               </PillButton>
             )}
           </div>
 
-          <div className="flex flex-col items-start gap-3">
-            <p className="text-body font-medium">Send USDC yourself</p>
-            <p className="text-sm text-bone-white/80">
-              Already hold USDC? Send it on the Arc network to your wallet address. Other tokens, or USDC on another
-              network, won&apos;t arrive.
-            </p>
-            <PillButton variant="outlined-light" compact onClick={copyAddress}>
-              {copy === "copied" ? "Address copied" : "Copy wallet address"}
-            </PillButton>
-            {copy === "failed" && (
-              <span className="select-all break-all font-dm-mono text-sm text-bone-white">{address}</span>
-            )}
-          </div>
-
-          <p aria-live="polite" className="text-sm text-bone-white md:col-span-2 empty:hidden">
+          <p aria-live="polite" className="text-sm text-bone-white empty:hidden">
             {status}
           </p>
 
-          {inline && (
-            <div ref={containerRef} className="h-[720px] overflow-hidden rounded-2xl bg-bone-white md:col-span-2" />
-          )}
+          {inline && <div ref={containerRef} className="h-[720px] overflow-hidden rounded-2xl bg-bone-white" />}
+        </div>
+      )}
+      {sheet && (
+        <div className="fixed inset-0 z-[90] flex items-end" role="dialog" aria-modal="true" aria-label="Add funds">
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => setOpen(false)}
+            className="absolute inset-0 bg-ink-black/50 animate-[fade-in-still_200ms_ease-out_both]"
+          />
+          <div className="relative w-full rounded-t-[24px] bg-bone-white px-5 pt-3 pb-[max(24px,env(safe-area-inset-bottom))] text-ink-black animate-[sheet-up_320ms_cubic-bezier(0.16,1,0.3,1)_both]">
+            <div className="mx-auto h-1 w-10 rounded-full bg-oat" />
+            <div className="mt-4 flex items-center justify-between">
+              <p className="font-champ text-[26px] font-extrabold leading-none">Add funds</p>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setOpen(false)}
+                className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-buttercream px-4 py-4">
+              <span className="font-dm-mono text-lg">{shortAddress(address)}</span>
+              <Tag tone="marigold" small>
+                Arc network
+              </Tag>
+            </div>
+            <PillButton variant="marigold" block className="mt-4" onClick={copyAddress}>
+              {copy === "copied" ? "Address copied" : "Copy address"}
+            </PillButton>
+            {copy === "failed" && <p className="mt-3 select-all break-all font-dm-mono text-sm">{address}</p>}
+
+            <div className="my-5 flex items-center gap-3 text-sm text-char">
+              <span className="h-px flex-1 bg-oat" />
+              or
+              <span className="h-px flex-1 bg-oat" />
+            </div>
+
+            {mintError ? (
+              <>
+                <p className="mb-3 text-sm">{mintError}</p>
+                <PillButton variant="outlined" block onClick={mint}>
+                  Try again
+                </PillButton>
+              </>
+            ) : (
+              <PillButton variant="outlined" block onClick={buy} disabled={!minted}>
+                {minting ? "Preparing…" : "Buy with bank transfer"}
+              </PillButton>
+            )}
+
+            <p aria-live="polite" className="mt-4 text-sm empty:hidden">
+              {status}
+            </p>
+          </div>
         </div>
       )}
     </div>

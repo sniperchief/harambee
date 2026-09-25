@@ -60,9 +60,6 @@ function LoginForm() {
           Create a new account
         </PillLink>
       </div>
-      <p className="mt-6 text-center text-sm text-char">
-        No passwords. No seed phrases. Nothing leaves your device.
-      </p>
     </AuthLayout>
   );
 }
