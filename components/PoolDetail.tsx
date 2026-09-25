@@ -25,6 +25,10 @@ import {
   type PoolStatus,
 } from "@/lib/format";
 
+// Kept back from the balance for the network fee (~0.03 USDC; ~0.08 on a
+// wallet's first transaction, which also deploys it).
+const GAS_BUFFER_USDC = 0.1;
+
 type Pool = {
   id: string;
   title: string;
@@ -165,12 +169,9 @@ export function PoolDetail({
         setContributeStatus("idle");
       } else {
         setContributeStatus("error");
-        // TEMPORARY: show the raw error so a failing contribution can be diagnosed.
-        const e = err as { name?: string; shortMessage?: string; details?: string };
-        const raw = [e?.name, e?.shortMessage ?? msg, e?.details].filter(Boolean).join(" | ");
         console.error("Contribution failed:", err);
         setErrorMessage(
-          closed ? "This pool just closed — contributions are no longer accepted." : `${message} [${raw}]`
+          closed ? "This pool just closed — contributions are no longer accepted." : message
         );
       }
       if (closed) {
@@ -230,7 +231,9 @@ export function PoolDetail({
   const endedByDeadline = statusOpen && contributionsClosed; // "open" in DB but past the (buffered) deadline
   const showLiveOpen = canContribute; // drives the "Open" badge
   const display = poolDisplay(state.status, pool.deadline, endedByDeadline);
-  const insufficient = balance !== null && !!amount && Number(amount) > Number(balance);
+  // Contributors pay their own gas from their USDC, so hold a little back.
+  const insufficient = balance !== null && !!amount && Number(amount) > Number(balance) - GAS_BUFFER_USDC;
+  const lowForGas = balance !== null && Number(balance) < GAS_BUFFER_USDC;
   const refundClaimed = viewerClaimed || refundStatus === "done";
 
   return (
@@ -357,7 +360,7 @@ export function PoolDetail({
             {canContribute && (
               <>
                 <h2 className="type-heading-sm">Contribute</h2>
-                <p className="mt-2 text-body text-char">Chip in any amount. It settles in seconds, no gas fee.</p>
+                <p className="mt-2 text-body text-char">Chip in any amount. It settles in seconds; a network fee of a few cents comes from your balance.</p>
                 {isLoggedIn ? (
                   <div className="mt-6 flex flex-col gap-4">
                     <AmountField
@@ -394,7 +397,7 @@ export function PoolDetail({
                     </div>
                     {insufficient && (
                       <FormMessage>
-                        That&apos;s more than your balance. To add funds, send USDC on the Arc network to your wallet address.
+                        That&apos;s more than your balance allows. Keep about ${GAS_BUFFER_USDC.toFixed(2)} for the network fee, or add funds by sending USDC on the Arc network to your wallet address.
                       </FormMessage>
                     )}
                   </div>
@@ -434,14 +437,21 @@ export function PoolDetail({
                     This pool didn&apos;t reach its goal in time. Your contribution is available to withdraw.
                   </p>
                   {isLoggedIn ? (
-                    <PillButton
-                      onClick={handleRefund}
-                      block
-                      className="mt-6"
-                      disabled={refundClaimed || refundStatus === "working"}
-                    >
-                      {refundClaimed ? "Refund claimed" : refundStatus === "working" ? "Claiming…" : "Claim refund"}
-                    </PillButton>
+                    <>
+                      <PillButton
+                        onClick={handleRefund}
+                        block
+                        className="mt-6"
+                        disabled={refundClaimed || refundStatus === "working"}
+                      >
+                        {refundClaimed ? "Refund claimed" : refundStatus === "working" ? "Claiming…" : "Claim refund"}
+                      </PillButton>
+                      {!refundClaimed && lowForGas && (
+                        <FormMessage className="mt-4">
+                          Claiming needs a few cents of USDC for the network fee. Add a little USDC to your wallet first.
+                        </FormMessage>
+                      )}
+                    </>
                   ) : (
                     <PillLink href={`/login?next=/pools/${pool.id}`} block className="mt-6">
                       Sign in to claim

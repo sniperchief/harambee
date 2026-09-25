@@ -10,7 +10,7 @@ import { PillLink } from "@/components/design/PillButton";
 export const metadata: Metadata = {
   title: "Documentation — Harambee",
   description:
-    "How Harambee works: the pooling lifecycle, smart-contract escrow, the two-wallet custody model, gasless passkey contributions, and what's live today.",
+    "How Harambee works: the pooling lifecycle, smart-contract escrow, the two-wallet custody model, passkey contributions, and what's live today.",
 };
 
 const TOC = [
@@ -19,7 +19,7 @@ const TOC = [
   { id: "lifecycle", label: "Pool lifecycle" },
   { id: "contracts", label: "Smart contracts" },
   { id: "custody", label: "Two-wallet custody" },
-  { id: "gasless", label: "Gasless contributions" },
+  { id: "gasless", label: "Network fees" },
   { id: "auth", label: "Passkey authentication" },
   { id: "currency", label: "Local-currency display" },
   { id: "honesty", label: "What's live" },
@@ -124,8 +124,8 @@ export default async function DocsPage() {
               </p>
               <p>
                 The design goal is that a non-crypto user never has to think about crypto. They sign
-                in with a passkey (Face ID / fingerprint), see balances in plain dollars, and pay no
-                gas fees. The blockchain is plumbing, not the product.
+                in with a passkey (Face ID / fingerprint), see balances in plain dollars, and pay only a
+                few cents in network fees. The blockchain is plumbing, not the product.
               </p>
             </div>
           </section>
@@ -142,8 +142,8 @@ export default async function DocsPage() {
               <li>
                 <span className="font-semibold text-ink-black">Circle infrastructure.</span> Developer-Controlled
                 Wallets (server-custodied) for platform actions, Modular Wallets + WebAuthn passkeys
-                (self-custodial ERC-4337 smart accounts) for contributors, and Gas Station to sponsor
-                gas so contributions are free to make.
+                (self-custodial ERC-4337 smart accounts) for contributors, who pay their own gas in
+                USDC.
               </li>
               <li>
                 <span className="font-semibold text-ink-black">App (Next.js 16 + Supabase).</span> The web
@@ -248,13 +248,13 @@ export default async function DocsPage() {
             </Callout>
           </Section>
 
-          <Section id="gasless" title="Gasless contributions" eyebrow="UX">
+          <Section id="gasless" title="Network fees" eyebrow="UX">
             <p>
-              Contributions are ERC-4337 user operations sent through Circle&apos;s bundler, with Gas
-              Station as the paymaster. The same Circle transport doubles as bundler and paymaster
-              endpoint, so declaring <Code>paymaster: true</Code> is all it takes for gas to be
-              sponsored. The contributor pays exactly what they intend to give — not a cent of gas on
-              top.
+              Contributions and refunds are ERC-4337 user operations sent through Circle&apos;s
+              bundler, with no paymaster: the contributor&apos;s smart account pays gas from its own
+              balance. Arc&apos;s gas token is USDC, so there is no second token to hold, and a fee is
+              a few cents (a little more on a wallet&apos;s first transaction, which also deploys it).
+              The app keeps a small buffer back so a contributor can&apos;t spend the fee they need.
             </p>
             <p>
               One Arc-specific detail: the default fee estimate underprices{" "}
@@ -303,7 +303,7 @@ export default async function DocsPage() {
                 <tbody className="text-ink-black/80">
                   {[
                     ["Escrow, contribute, release, refund", "Real", "Live on Arc mainnet with real USDC."],
-                    ["Passkey wallets + gasless txs", "Real", "Self-custodial ERC-4337 + Gas Station."],
+                    ["Passkey wallets", "Real", "Self-custodial ERC-4337; contributors pay gas in USDC."],
                     ["Local-currency amount", "Display only", "Live public FX rate, informational — not StableFX, not a payout."],
                     ["Credit-card contributions", "Roadmap", "Not built yet."],
                     ["Fiat off-ramp to bank/mobile money", "Roadmap", "No provider supports Arc yet."],

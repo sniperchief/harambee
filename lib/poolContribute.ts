@@ -1,8 +1,9 @@
 // Browser-only, like lib/modularWallet.ts (WebAuthn requires a real window).
 // Where modularWallet.ts stops at deriving a wallet *address* for
 // auth/display, this derives the same Circle smart account but keeps it as
-// a signable object, so it can actually submit a sponsored on-chain
-// transaction — the piece the auth flow never needed.
+// a signable object, so it can actually submit an on-chain transaction.
+// Gas is not sponsored: the smart account pays it from its own USDC balance
+// (Arc's native currency), a few cents per transaction — the piece the auth flow never needed.
 import { encodeFunctionData, parseEther, type Address } from "viem";
 import { toWebAuthnAccount, createBundlerClient } from "viem/account-abstraction";
 import {
@@ -49,13 +50,11 @@ async function getBundlerClient() {
   const owner = toWebAuthnAccount({ credential, rpId: credential.rpId });
   const account = await toCircleSmartAccount({ client: publicClient, owner });
 
-  // The same modular transport doubles as both bundler and paymaster
-  // (Circle Gas Station) endpoint — `paymaster: true` is what sponsors gas.
+  // No paymaster: the account prefunds gas from its own USDC balance.
   const bundlerClient = createBundlerClient({
     account,
     chain: arcMainnet,
     transport: modularTransport,
-    paymaster: true,
     // viem's default fee estimate underprices maxPriorityFeePerGas on Arc,
     // tripping the bundler precheck ("maxPriorityFeePerGas ... must be at
     // least ..."). Use Circle's own gas-price oracle so the fees always

@@ -57,6 +57,11 @@ export function friendlyPasskeyError(err: unknown): { message: string; cancelled
   if (has(/transaction reverted/i)) {
     return { cancelled: false, message: "The transaction didn't go through, so no money moved. Please try again." };
   }
+  // The wallet can't cover the amount plus the network fee (AA21 = the
+  // account couldn't prefund gas). Nothing was sent.
+  if (has(/AA21|didn't pay prefund|insufficient (funds|balance)|exceeds (the )?balance/i)) {
+    return { cancelled: false, message: "Not enough USDC to cover this plus the network fee. Nothing was sent." };
+  }
   if (has(/couldn't confirm this contribution/i)) {
     return { cancelled: false, message: "We couldn't confirm that contribution on-chain. Refresh the page to see the latest total." };
   }

@@ -55,7 +55,7 @@ const FAQ = [
   },
   {
     q: "Are there gas fees?",
-    a: "No. Transactions are gasless — Harambee sponsors the network fees, so contributors pay exactly what they intend to give.",
+    a: "Just a few cents. Each contribution or refund pays a small network fee in USDC from your own balance. Creating a pool is free.",
   },
 ];
 
@@ -174,7 +174,7 @@ export default async function Home() {
           <SectionHeader
             align="center"
             title="Start pooling toward what matters"
-            lead="Create your first pool in about a minute. No downloads, no gas fees, no jargon."
+            lead="Create your first pool in about a minute. No downloads, no jargon."
           />
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <PillLink href={startHref}>Start a pool</PillLink>
