@@ -1,16 +1,10 @@
 import { Logo } from "@/components/Logo";
 import { SurfaceCard } from "@/components/design/Card";
 
-const PROMISES = [
-  "Your funds sit in escrow — never in anyone’s personal wallet.",
-  "Sign in with the passkey on your device. No passwords, no seed phrases.",
-  "Full refunds if a goal isn’t reached. No one can withdraw early.",
-];
-
 /**
- * Split-screen auth. Left: an ink brand panel (surface level 3) with a Champ
- * statement and a ruled, numbered list. Right: the cream canvas with a mono
- * eyebrow, Champ title, lead, and the actions in a Surface Card.
+ * Split-screen auth. Left: a quiet ink brand panel (logo, one Champ line) so
+ * the eye goes to the form. Right: the cream canvas with a mono eyebrow, Champ
+ * title, lead, and the actions in a Surface Card.
  */
 export function AuthLayout({
   eyebrow,
@@ -33,17 +27,7 @@ export function AuthLayout({
       <aside className="hidden flex-col justify-between bg-ink-black px-12 py-12 text-bone-white lg:flex lg:w-1/2">
         <Logo href="/" tone="light" />
 
-        <div className="max-w-[480px]">
-          <h2 className="type-heading-lg">The honest way to pool money toward a shared goal.</h2>
-          <ol className="mt-10 border-t border-bone-white/25">
-            {PROMISES.map((t, i) => (
-              <li key={t} className="flex gap-8 border-b border-bone-white/25 py-6">
-                <span className="font-dm-mono text-sm text-marigold">0{i + 1}</span>
-                <span className="text-body">{t}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
+        <h2 className="type-display max-w-[480px]">Pool together. Give together.</h2>
 
         <p className="font-dm-mono text-sm text-bone-white/80">Built on Circle Arc · Settled in USDC</p>
       </aside>
