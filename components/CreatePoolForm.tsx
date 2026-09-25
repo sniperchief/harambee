@@ -74,7 +74,7 @@ function StepHeader({ step, done }: { step: number; done: boolean }) {
   );
 }
 
-const CARD_TITLE = "font-champ text-[36px] font-extrabold leading-[1.08] tracking-[0.01em] sm:text-[46px]";
+const CARD_TITLE = "font-champ text-[36px] font-extrabold leading-[1.08] tracking-[-0.02em] sm:text-[46px]";
 
 export function CreatePoolForm() {
   const router = useRouter();

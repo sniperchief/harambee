@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createOnrampKit, type OnrampSession } from "@circle-fin/onramp-kit";
 import { useWalletBalance } from "@/lib/useWalletBalance";
 import { formatUsdc } from "@/lib/format";
+import { QRCodeSVG } from "qrcode.react";
 import { PillButton } from "@/components/design/PillButton";
+import { Tag } from "@/components/design/Tag";
 
 type Minted = { session: OnrampSession; widgetBaseUrl: string };
 type Widget = { close(): void };
@@ -21,9 +23,10 @@ const NOT_COMPLETED: Record<string, string> = {
 };
 
 // The dashboard's money surface: an ink panel with the available balance as a
-// large DM Mono figure. "Add funds" offers two ways in: buy USDC by bank
-// transfer through Circle's Arc Onramp (opens as a popup; the USDC lands in
-// this wallet), or copy the wallet address and send USDC on Arc yourself.
+// large DM Mono figure. "Add funds" opens two ways in. The main one is sending
+// USDC on Arc to this wallet (QR code + address). The other is buying USDC by
+// bank transfer through Circle's Arc Onramp, which opens as a popup and
+// delivers to this wallet.
 export function BalanceBand({ address }: { address: string | null }) {
   const { balance, loading, refresh } = useWalletBalance();
   const [open, setOpen] = useState(false);
@@ -93,7 +96,7 @@ export function BalanceBand({ address }: { address: string | null }) {
       // About to expire: fetch a new one; the next click opens it.
       setMinted(null);
       mint();
-      setStatus("Refreshed your session. Tap “Buy with bank transfer” again.");
+      setStatus("Refreshed your session. Tap “Buy USDC” again.");
       return;
     }
     setStatus("");
@@ -129,9 +132,10 @@ export function BalanceBand({ address }: { address: string | null }) {
     try {
       await navigator.clipboard.writeText(address);
       setCopy("copied");
+      setTimeout(() => setCopy("idle"), 2000);
     } catch {
-      // Clipboard blocked (permissions / insecure context): show the address
-      // so it can be copied by hand.
+      // Clipboard blocked (permissions / insecure context): the address is
+      // on screen, so it can be selected by hand.
       setCopy("failed");
     }
   }
@@ -166,48 +170,60 @@ export function BalanceBand({ address }: { address: string | null }) {
       </div>
 
       {open && address && (
-        <div className="mt-8 grid gap-6 border-t border-bone-white/15 pt-6 md:grid-cols-2">
-          <div className="flex flex-col items-start gap-3">
-            <p className="text-body font-medium">Buy with bank transfer</p>
-            <p className="text-sm text-bone-white/80">
-              Pay from your bank account and the USDC arrives in this wallet on Arc. Available in select US states and EU
-              countries; the provider checks your ID the first time.
-            </p>
-            {mintError ? (
-              <>
-                <p className="text-sm text-bone-white">{mintError}</p>
-                <PillButton variant="outlined-light" compact onClick={mint}>
-                  Try again
+        <div className="mt-8 flex flex-col gap-4 border-t border-bone-white/15 pt-6 animate-fade-in">
+          {/* Primary: send USDC on Arc to this wallet. */}
+          <div className="flex flex-col gap-6 rounded-2xl bg-bone-white p-5 text-ink-black sm:flex-row sm:items-center sm:p-6">
+            <div className="shrink-0 self-center rounded-2xl border-[1.5px] border-ink-black bg-bone-white p-3">
+              <QRCodeSVG value={address} size={128} fgColor="#000000" bgColor="#ffffff" level="M" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-body font-medium">Send USDC to your wallet</p>
+                <Tag tone="marigold" small>
+                  Arc network
+                </Tag>
+              </div>
+              <p className="mt-3 select-all break-all rounded-xl bg-buttercream px-4 py-3 font-dm-mono text-sm leading-relaxed">
+                {address}
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <PillButton variant="marigold" compact onClick={copyAddress}>
+                  {copy === "copied" ? "Address copied" : "Copy address"}
                 </PillButton>
-              </>
+                <p aria-live="polite" className="text-sm text-char">
+                  {copy === "failed"
+                    ? "Couldn't copy. Select the address above instead."
+                    : "Only USDC on Arc. Other tokens or networks won't arrive."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Secondary: buy with a bank transfer through Arc Onramp. */}
+          <div className="flex flex-col gap-3 rounded-2xl border border-bone-white/20 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="min-w-0">
+              <p className="text-body font-medium">No USDC yet? Buy with a bank transfer</p>
+              <p className="mt-1 text-sm text-bone-white/70">
+                {mintError ||
+                  "Available in select US states and EU countries. The provider checks your ID on your first purchase."}
+              </p>
+            </div>
+            {mintError ? (
+              <PillButton variant="outlined-light" compact className="shrink-0" onClick={mint}>
+                Try again
+              </PillButton>
             ) : (
-              <PillButton variant="outlined-light" compact onClick={buy} disabled={!minted}>
-                {minting ? "Preparing…" : "Buy with bank transfer"}
+              <PillButton variant="outlined-light" compact className="shrink-0" onClick={buy} disabled={!minted}>
+                {minting ? "Preparing…" : "Buy USDC"}
               </PillButton>
             )}
           </div>
 
-          <div className="flex flex-col items-start gap-3">
-            <p className="text-body font-medium">Send USDC yourself</p>
-            <p className="text-sm text-bone-white/80">
-              Already hold USDC? Send it on the Arc network to your wallet address. Other tokens, or USDC on another
-              network, won&apos;t arrive.
-            </p>
-            <PillButton variant="outlined-light" compact onClick={copyAddress}>
-              {copy === "copied" ? "Address copied" : "Copy wallet address"}
-            </PillButton>
-            {copy === "failed" && (
-              <span className="select-all break-all font-dm-mono text-sm text-bone-white">{address}</span>
-            )}
-          </div>
-
-          <p aria-live="polite" className="text-sm text-bone-white md:col-span-2 empty:hidden">
+          <p aria-live="polite" className="text-sm text-bone-white empty:hidden">
             {status}
           </p>
 
-          {inline && (
-            <div ref={containerRef} className="h-[720px] overflow-hidden rounded-2xl bg-bone-white md:col-span-2" />
-          )}
+          {inline && <div ref={containerRef} className="h-[720px] overflow-hidden rounded-2xl bg-bone-white" />}
         </div>
       )}
     </div>

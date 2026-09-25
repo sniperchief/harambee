@@ -1,20 +1,16 @@
 import type { Metadata } from "next";
-import { DM_Sans, DM_Mono, Roboto_Slab } from "next/font/google";
+import { Archivo, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { NavProgress } from "@/components/NavProgress";
 
-// Body + UI text.
-const dmSans = DM_Sans({
-  variable: "--nf-dm-sans",
+// One family for the whole site. Archivo stands in for Champ (the heavy,
+// slightly wide grotesk in DESIGN.md) until Champ is licensed: set in 800
+// and a touch wide for headings, regular for body and UI. Variable, with the
+// width axis, so every weight and the wider cut render true.
+const archivo = Archivo({
+  variable: "--nf-archivo",
   subsets: ["latin"],
-  display: "swap",
-});
-
-// Display face — Roboto Slab stands in for Champ (DESIGN.md's listed
-// substitute) until Champ is licensed. Variable, so 500 and 800 render true.
-const slab = Roboto_Slab({
-  variable: "--nf-roboto-slab",
-  subsets: ["latin"],
+  axes: ["wdth"],
   display: "swap",
 });
 
@@ -38,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${slab.variable} ${dmMono.variable} h-full`}>
+    <html lang="en" className={`${archivo.variable} ${dmMono.variable} h-full`}>
       <body className="min-h-full">
         <NavProgress />
         {children}
