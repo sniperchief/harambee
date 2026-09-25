@@ -165,8 +165,12 @@ export function PoolDetail({
         setContributeStatus("idle");
       } else {
         setContributeStatus("error");
+        // TEMPORARY: show the raw error so a failing contribution can be diagnosed.
+        const e = err as { name?: string; shortMessage?: string; details?: string };
+        const raw = [e?.name, e?.shortMessage ?? msg, e?.details].filter(Boolean).join(" | ");
+        console.error("Contribution failed:", err);
         setErrorMessage(
-          closed ? "This pool just closed — contributions are no longer accepted." : message
+          closed ? "This pool just closed — contributions are no longer accepted." : `${message} [${raw}]`
         );
       }
       if (closed) {
