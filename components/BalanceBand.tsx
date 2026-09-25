@@ -1,14 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createOnrampKit, type OnrampSession } from "@circle-fin/onramp-kit";
 import { useWalletBalance } from "@/lib/useWalletBalance";
-import { formatUsdc } from "@/lib/format";
+import { X } from "lucide-react";
+import { formatUsdc, shortAddress } from "@/lib/format";
 import { QRCodeSVG } from "qrcode.react";
 import { PillButton } from "@/components/design/PillButton";
 import { Tag } from "@/components/design/Tag";
 
 type Minted = { session: OnrampSession; widgetBaseUrl: string };
+
+// Phones get a bottom sheet instead of the inline panel.
+const MOBILE = "(max-width: 639px)";
+function subscribeMobile(onChange: () => void) {
+  const mq = window.matchMedia(MOBILE);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+function useIsMobile(): boolean {
+  return useSyncExternalStore(subscribeMobile, () => window.matchMedia(MOBILE).matches, () => false);
+}
 type Widget = { close(): void };
 
 // Why a purchase stopped, in words a contributor can act on. Codes the widget
@@ -25,8 +37,9 @@ const NOT_COMPLETED: Record<string, string> = {
 // The dashboard's money surface: an ink panel with the available balance as a
 // large DM Mono figure. "Add funds" opens two ways in. The main one is sending
 // USDC on Arc to this wallet (QR code + address). The other is buying USDC by
-// bank transfer through Circle's Arc Onramp, which opens as a popup and
-// delivers to this wallet.
+// bank transfer through Circle's Arc Onramp, which opens as a popup (a new tab
+// on phones) and delivers to this wallet. On desktop the options open inline;
+// on phones, in a bottom sheet with just the address, Copy and bank transfer.
 export function BalanceBand({ address }: { address: string | null }) {
   const { balance, loading, refresh } = useWalletBalance();
   const [open, setOpen] = useState(false);
@@ -38,6 +51,8 @@ export function BalanceBand({ address }: { address: string | null }) {
   const [inline, setInline] = useState(false);
   const widgetRef = useRef<Widget | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const mobile = useIsMobile();
+  const sheet = open && !!address && mobile;
 
   // Sessions are minted ahead of the click: the popup must open synchronously
   // inside the click handler or the browser blocks it.
@@ -58,6 +73,35 @@ export function BalanceBand({ address }: { address: string | null }) {
   }, []);
 
   useEffect(() => () => widgetRef.current?.close(), []);
+
+  // Funding happens in another app or tab (an exchange, the bank-transfer
+  // widget), so re-read the balance whenever the user comes back.
+  useEffect(() => {
+    const onReturn = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", onReturn);
+    return () => {
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", onReturn);
+    };
+  }, [refresh]);
+
+  // Bottom sheet: lock the page behind it and close on Escape.
+  useEffect(() => {
+    if (!sheet) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [sheet]);
 
   const callbacks = useCallback(
     () => ({
@@ -110,6 +154,16 @@ export function BalanceBand({ address }: { address: string | null }) {
       mint();
     } else if (result.reason === "popup_blocked") {
       setStatus("Your browser blocked the popup. Allow popups for this site and try again.");
+    } else if (mobile) {
+      // In-app browsers / installed apps on a phone: open the widget in its
+      // own tab. No events come back; the balance refreshes on return.
+      const tab = minted.session.widgetUrl ? window.open(minted.session.widgetUrl, "_blank", "noopener") : null;
+      if (tab) {
+        setMinted(null);
+        mint();
+      } else {
+        setStatus("Couldn't open a new tab. Open Harambee in your phone's browser and try again.");
+      }
     } else {
       // In-app browsers and installed apps can't use popups: show it inline.
       setInline(true);
@@ -164,12 +218,12 @@ export function BalanceBand({ address }: { address: string | null }) {
             disabled={!address}
             aria-expanded={open}
           >
-            {open ? "Close" : "Add funds"}
+            {open && !mobile ? "Close" : "Add funds"}
           </PillButton>
         </div>
       </div>
 
-      {open && address && (
+      {open && address && !mobile && (
         <div className="mt-8 flex flex-col gap-4 border-t border-bone-white/15 pt-6 animate-fade-in">
           {/* Primary: send USDC on Arc to this wallet. */}
           <div className="flex flex-col gap-6 rounded-2xl bg-bone-white p-5 text-ink-black sm:flex-row sm:items-center sm:p-6">
@@ -224,6 +278,64 @@ export function BalanceBand({ address }: { address: string | null }) {
           </p>
 
           {inline && <div ref={containerRef} className="h-[720px] overflow-hidden rounded-2xl bg-bone-white" />}
+        </div>
+      )}
+      {sheet && (
+        <div className="fixed inset-0 z-[90] flex items-end" role="dialog" aria-modal="true" aria-label="Add funds">
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => setOpen(false)}
+            className="absolute inset-0 bg-ink-black/50 animate-[fade-in-still_200ms_ease-out_both]"
+          />
+          <div className="relative w-full rounded-t-[24px] bg-bone-white px-5 pt-3 pb-[max(24px,env(safe-area-inset-bottom))] text-ink-black animate-[sheet-up_320ms_cubic-bezier(0.16,1,0.3,1)_both]">
+            <div className="mx-auto h-1 w-10 rounded-full bg-oat" />
+            <div className="mt-4 flex items-center justify-between">
+              <p className="font-champ text-[26px] font-extrabold leading-none">Add funds</p>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setOpen(false)}
+                className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-buttercream px-4 py-4">
+              <span className="font-dm-mono text-lg">{shortAddress(address)}</span>
+              <Tag tone="marigold" small>
+                Arc network
+              </Tag>
+            </div>
+            <PillButton variant="marigold" block className="mt-4" onClick={copyAddress}>
+              {copy === "copied" ? "Address copied" : "Copy address"}
+            </PillButton>
+            {copy === "failed" && <p className="mt-3 select-all break-all font-dm-mono text-sm">{address}</p>}
+
+            <div className="my-5 flex items-center gap-3 text-sm text-char">
+              <span className="h-px flex-1 bg-oat" />
+              or
+              <span className="h-px flex-1 bg-oat" />
+            </div>
+
+            {mintError ? (
+              <>
+                <p className="mb-3 text-sm">{mintError}</p>
+                <PillButton variant="outlined" block onClick={mint}>
+                  Try again
+                </PillButton>
+              </>
+            ) : (
+              <PillButton variant="outlined" block onClick={buy} disabled={!minted}>
+                {minting ? "Preparing…" : "Buy with bank transfer"}
+              </PillButton>
+            )}
+
+            <p aria-live="polite" className="mt-4 text-sm empty:hidden">
+              {status}
+            </p>
+          </div>
         </div>
       )}
     </div>
