@@ -3,7 +3,6 @@ import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { HeroMockup } from "@/components/marketing/HeroMockup";
 import { PullTogetherBand } from "@/components/marketing/PullTogetherBand";
-import { TypingText } from "@/components/TypingText";
 import { Hero } from "@/components/design/Hero";
 import { Section, SectionHeader } from "@/components/design/Section";
 import { FeatureGrid, type Feature } from "@/components/design/FeatureGrid";
@@ -16,34 +15,63 @@ const HERO_IMAGE = "/hero.jpg";
 const STEPS: Feature[] = [
   {
     marker: "01",
-    title: "Create a pool",
-    body: "Name the goal, set a target and a deadline. No bank forms, no crypto jargon.",
+    title: "Create a fundraising campaign",
+    body: "Say what you’re raising money for, then set a fundraising goal and a deadline. No bank forms, no jargon.",
   },
   {
     marker: "02",
     title: "Share one link",
-    body: "Anyone can chip in with a passkey — Face ID or fingerprint. Nothing to download, no seed phrase.",
+    body: "Send it to people anywhere in the world. They contribute with a passkey — Face ID or fingerprint. Nothing to download.",
   },
   {
     marker: "03",
-    title: "Release or refund",
-    body: "Money waits in escrow until the pool’s rules are met, then releases to the recipient — or goes back to everyone.",
+    title: "Funds are settled by your rules",
+    body: "Contributions are held in escrow until the goal or deadline is reached, then go to the recipient — or back to contributors.",
   },
 ];
 
+const WHY: Feature[] = [
+  {
+    title: "Raise from anywhere",
+    body: "Invite contributors from different countries to give in USDC, without relying on traditional international bank transfers.",
+  },
+  {
+    title: "Progress in real time",
+    body: "The amount raised, the number of contributors and each new contribution update live for everyone.",
+  },
+  {
+    title: "Held securely",
+    body: "Contributions wait in escrow — not in anyone’s personal account — until the fundraiser’s rules settle them.",
+  },
+];
+
+// What every contributor can see on a fundraiser page.
+const TRANSPARENCY = [
+  "How much has been raised",
+  "How many people have contributed",
+  "Recent contributions, as they happen",
+  "The fundraising goal and the deadline",
+  "What happens when the goal is reached",
+  "What happens if the deadline passes first",
+];
+
 const USE_CASES = [
-  { title: "Weddings", body: "Collect from family and friends toward the celebration." },
-  { title: "School fees", body: "Rally a community to keep a student in class." },
-  { title: "Family support", body: "Come together quickly when someone needs help." },
+  { title: "Medical expenses", body: "Cover treatment, surgery or hospital bills with help from people near and far." },
+  { title: "Natural disaster relief", body: "Rally support quickly when floods, fires or storms hit a community." },
+  { title: "Funerals", body: "Share the cost of a send-off with family and friends, wherever they live." },
+  { title: "Tuition fees", body: "Keep a student in class with contributions from everyone who believes in them." },
   { title: "Community projects", body: "Fund the borehole, the clinic, the church roof." },
-  { title: "Cooperatives", body: "Run a transparent savings circle with clear rules." },
-  { title: "Diaspora giving", body: "Send home together, with everyone able to see the total." },
+  { title: "Family support", body: "Come together quickly when someone at home needs help." },
 ];
 
 const FAQ = [
   {
     q: "Where is my money held?",
-    a: "Every contribution goes into a smart-contract escrow — not a personal account. The money can only leave by the rules set when the pool was created: to the recipient, or back to the contributors. No single person can withdraw early, and the rules can't be changed afterwards.",
+    a: "Every contribution goes into an onchain escrow — not a personal account. The money can only leave by the rules set when the fundraiser was created: to the recipient, or back to the contributors. No single person can withdraw early, and the rules can't be changed afterwards.",
+  },
+  {
+    q: "Can people in other countries contribute?",
+    a: "Yes. Anyone with the link can contribute in USDC from wherever they are, without an international bank transfer. Everyone sees the same total in dollars, and you can also show an approximate amount in a local currency.",
   },
   {
     q: "Do I need to understand crypto?",
@@ -51,11 +79,11 @@ const FAQ = [
   },
   {
     q: "What if we don’t reach the goal?",
-    a: "That depends on the rule the organizer chose when creating the pool. With “only when target is reached”, every contributor can claim back exactly what they put in. With the other rules, whatever was raised goes to the recipient at the deadline.",
+    a: "That depends on the rule the organizer chose when creating the fundraiser. With “only if the goal is reached”, every contributor can claim back exactly what they put in. With the other rules, whatever was raised goes to the recipient at the deadline. The rule is shown on every fundraiser page.",
   },
   {
     q: "Are there gas fees?",
-    a: "Just a few cents. Each contribution or refund pays a small network fee in USDC from your own balance. Creating a pool is free.",
+    a: "Just a few cents. Each contribution or refund pays a small network fee in USDC from your own balance. Creating a fundraiser is free.",
   },
 ];
 
@@ -72,15 +100,13 @@ export default async function Home() {
           image={HERO_IMAGE}
           headline={
             <>
-              Pool together.
+              Raise money together,
               <br />
-              Give together.
-              <br />
-              <TypingText words={["Achieve together.", "Celebrate together."]} />
+              from anywhere.
             </>
           }
-          subtext="Harambee is the calm, trustworthy way for groups to collect money toward a shared goal — held safely in escrow, then released or refunded by the rules you set."
-          actions={<PillLink href={startHref}>Start a pool</PillLink>}
+          subtext="Harambee is a global fundraising platform. Collect USDC contributions from people in any country, without international bank transfers. Everyone sees progress in real time, and funds are held securely until your fundraiser’s rules are met."
+          actions={<PillLink href={startHref}>Fundraise</PillLink>}
         />
 
         {/* "all pull together" — the meaning of Harambee, as a band */}
@@ -93,17 +119,31 @@ export default async function Home() {
           <FeatureGrid items={STEPS} className="mt-14" />
         </Section>
 
+        {/* Cross-border */}
+        <Section id="anywhere" className="!pt-0">
+          <p className="type-eyebrow">Built for raising across borders</p>
+          <h2 className="type-heading-lg mt-3 max-w-[640px]">Your supporters don’t all live in one place.</h2>
+          <FeatureGrid items={WHY} className="mt-14" />
+        </Section>
+
         {/* Product preview — UI mockup as a white card inset in cream */}
         <Section>
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
-              <h2 className="type-heading-lg">Everyone sees the same ledger</h2>
+              <p className="type-eyebrow">Transparency</p>
+              <h2 className="type-heading-lg mt-3">Everyone sees the same numbers</h2>
               <p className="type-subheading mt-5 max-w-lg opacity-80">
-                Every contribution is recorded on-chain and shown to the whole group — the total, the
-                contributors, and exactly when the pool releases.
+                Every contribution is recorded onchain and shown on the fundraiser page. Contributors can see:
               </p>
+              <ul className="mt-6 max-w-lg border-t border-ink-black">
+                {TRANSPARENCY.map((t) => (
+                  <li key={t} className="border-b border-dashed border-oat py-3 text-body">
+                    {t}
+                  </li>
+                ))}
+              </ul>
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-                <PillLink href={startHref}>Start a pool</PillLink>
+                <PillLink href={startHref}>Fundraise</PillLink>
                 <PillLink href="/docs" variant="outlined">
                   Read the docs
                 </PillLink>
@@ -120,8 +160,8 @@ export default async function Home() {
               <p className="type-eyebrow">Use cases</p>
               <h2 className="type-heading-lg mt-3">Whatever you’re raising for.</h2>
               <p className="mt-6 max-w-md text-body text-bone-white/85">
-                From weddings to school fees to keeping a cooperative honest — one place to gather funds
-                where everyone can see the total.
+                From medical bills to disaster relief to tuition fees — one place to raise money from
+                people near and far, where everyone can see the total.
               </p>
               <PillLink href={startHref} variant="outlined-light" compact className="mt-8">
                 Start yours
@@ -173,11 +213,11 @@ export default async function Home() {
         <Section>
           <SectionHeader
             align="center"
-            title="Start pooling toward what matters"
-            lead="Create your first pool in about a minute. No downloads, no jargon."
+            title="Raise money together, from anywhere"
+            lead="Create your first fundraiser in about a minute. No downloads, no jargon."
           />
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <PillLink href={startHref}>Start a pool</PillLink>
+            <PillLink href={startHref}>Fundraise</PillLink>
             <PillLink href="#how" variant="outlined">
               See how it works
             </PillLink>

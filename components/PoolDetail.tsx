@@ -22,7 +22,9 @@ import {
   timeUntil,
   timeAgo,
   shortAddress,
+  RELEASE_RULES,
   type PoolStatus,
+  type ReleaseMode,
 } from "@/lib/format";
 
 // Kept back from the balance for the network fee (~0.03 USDC; ~0.08 on a
@@ -43,6 +45,7 @@ type Pool = {
   fx_rate: string | number | null;
   recipient_wallet_address?: string | null;
   release_tx_hash?: string | null;
+  release_mode?: ReleaseMode | null;
   created_at?: string;
 };
 
@@ -103,6 +106,9 @@ export function PoolDetail({
     fxRate: pool.fx_rate,
   });
   const [amount, setAmount] = useState("");
+  // The amount of the viewer's last successful contribution, for the
+  // confirmation message; cleared when they start another.
+  const [lastContribution, setLastContribution] = useState<string | null>(null);
   const [contributeStatus, setContributeStatus] = useState<"idle" | "working" | "error">("idle");
   const [refundStatus, setRefundStatus] = useState<"idle" | "working" | "done" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -112,7 +118,7 @@ export function PoolDetail({
   const fxRate = useFxRate(pool.target_currency);
 
   // Tick once a second so expiry and the countdown update live — this is what
-  // flips the contribute box to "Pool ended" the instant the clock runs out,
+  // flips the contribute box to "Fundraiser ended" the instant the clock runs out,
   // even while someone is mid-typing.
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -147,6 +153,7 @@ export function PoolDetail({
   async function handleContribute() {
     setContributeStatus("working");
     setErrorMessage("");
+    setLastContribution(null);
     try {
       const { txHash } = await contributeWithPasskey(poolEscrowAddress, pool.onchain_pool_id, amount);
       const response = await fetch(`/api/pools/${pool.id}/contribute/confirm`, {
@@ -157,6 +164,7 @@ export function PoolDetail({
       const body = await safeJson(response);
       if (!response.ok) throw new Error((body?.error as string) ?? "Failed to record contribution");
       if (body) setState((prev) => ({ ...prev, ...body }));
+      setLastContribution(amount);
       setAmount("");
       setContributeStatus("idle");
       refreshBalance();
@@ -171,11 +179,11 @@ export function PoolDetail({
         setContributeStatus("error");
         console.error("Contribution failed:", err);
         setErrorMessage(
-          closed ? "This pool just closed — contributions are no longer accepted." : message
+          closed ? "This fundraiser just closed — contributions are no longer accepted." : message
         );
       }
       if (closed) {
-        // Flip the UI to the pool's real state.
+        // Flip the UI to the fundraiser's real state.
         fetch(`/api/pools/${pool.id}/sync`, { method: "POST" })
           .then(async (r) => {
             if (r.ok) {
@@ -235,6 +243,7 @@ export function PoolDetail({
   const insufficient = balance !== null && !!amount && Number(amount) > Number(balance) - GAS_BUFFER_USDC;
   const lowForGas = balance !== null && Number(balance) < GAS_BUFFER_USDC;
   const refundClaimed = viewerClaimed || refundStatus === "done";
+  const rule = RELEASE_RULES[pool.release_mode ?? "threshold_or_deadline"];
 
   return (
     <div>
@@ -253,7 +262,7 @@ export function PoolDetail({
                   <CountUp value={current} prefix="$" />
                 </p>
                 <p className="stat-callout__label mt-2">
-                  raised so far
+                  raised of ${formatUsdc(target, { decimals: 0 })} goal
                   {pool.target_currency && fxRate !== null && (
                     <span className="font-dm-mono text-char"> · ≈ {formatLocal(Number(current) * fxRate, pool.target_currency)}</span>
                   )}
@@ -261,7 +270,7 @@ export function PoolDetail({
               </div>
               <div className="text-right">
                 <p className="type-heading-sm tnum">{Math.round(pct)}%</p>
-                <p className="font-dm-mono text-sm text-char">of ${formatUsdc(target)}</p>
+                <p className="font-dm-mono text-sm text-char">funded</p>
               </div>
             </div>
             <Meter value={pct} tone={display.meter} className="mt-8" label={`${Math.round(pct)}% funded`} />
@@ -272,13 +281,13 @@ export function PoolDetail({
                 <p className="type-mono mt-2">{contributorCount}</p>
               </div>
               <div>
-                <p className="text-sm text-char">Release</p>
+                <p className="text-sm text-char">Time remaining</p>
                 <p className={`type-mono mt-2 ${showLiveOpen && time.urgent ? "underline decoration-2 underline-offset-4" : ""}`}>
                   {showLiveOpen ? time.label : endedByDeadline ? "Ended" : status.label}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-char">Target</p>
+                <p className="text-sm text-char">Fundraising goal</p>
                 <p className="type-mono mt-2">
                   {pool.target_currency && fxRate !== null
                     ? formatLocal(Number(target) * fxRate, pool.target_currency)
@@ -293,8 +302,8 @@ export function PoolDetail({
         <div className="order-3 space-y-6 lg:order-none lg:col-span-2 lg:col-start-1 lg:row-start-2">
           {state.status === "released" && (
             <SurfaceCard className="border-[1.5px] border-ink-black">
-              <Tag tone="black">Released</Tag>
-              <p className="type-heading-sm mt-5">Funds released to the recipient</p>
+              <Tag tone="black">Completed</Tag>
+              <p className="type-heading-sm mt-5">Funds sent to the recipient</p>
               <p className="type-mono mt-3">
                 ${formatUsdc(state.currentAmount)} USDC
               </p>
@@ -310,16 +319,16 @@ export function PoolDetail({
                   rel="noopener noreferrer"
                   className="mt-4 inline-block text-body font-medium underline underline-offset-4"
                 >
-                  View release on-chain ↗
+                  View the payout onchain ↗
                 </a>
               )}
             </SurfaceCard>
           )}
 
           <SurfaceCard>
-            <h2 className="type-heading-sm">Funding history</h2>
+            <h2 className="type-heading-sm">Recent contributions</h2>
             {contributions.length === 0 ? (
-              <WarmCard className="mt-6 !py-12 text-center text-body">No contributions yet. Be the first to chip in.</WarmCard>
+              <WarmCard className="mt-6 !py-12 text-center text-body">No contributions yet. Be the first to contribute.</WarmCard>
             ) : (
               <ul className="mt-4">
                 {contributions.map((c) => (
@@ -332,7 +341,7 @@ export function PoolDetail({
                           <>
                             {" · "}
                             <a href={txUrl(c.tx_hash)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
-                              on-chain ↗
+                              onchain ↗
                             </a>
                           </>
                         )}
@@ -357,15 +366,31 @@ export function PoolDetail({
         {/* Action card — under progress on mobile; sticky right column on desktop */}
         <div className="order-2 lg:order-none lg:col-span-1 lg:col-start-3 lg:row-span-2 lg:row-start-1">
           <SurfaceCard className="lg:sticky lg:top-20">
+            {lastContribution && (
+              <div role="status" className="mb-6 rounded-2xl border-[1.5px] border-ink-black bg-buttercream p-5">
+                <p className="text-body font-medium">Your contribution was successful</p>
+                <p className="type-mono mt-2">${formatUsdc(lastContribution)} contributed</p>
+                <p className="mt-1 text-sm text-char">
+                  ${formatUsdc(current)} of ${formatUsdc(target, { decimals: 0 })} raised
+                </p>
+              </div>
+            )}
+
             {canContribute && (
               <>
-                <h2 className="type-heading-sm">Contribute</h2>
-                <p className="mt-2 text-body text-char">Chip in any amount. It settles in seconds; a network fee of a few cents comes from your balance.</p>
+                <h2 className="type-heading-sm">Contribute to this fundraiser</h2>
+                <p className="mt-2 text-body text-char">
+                  Give from anywhere in USDC. It settles in seconds; a network fee of a few cents comes from your balance.
+                </p>
                 {isLoggedIn ? (
                   <div className="mt-6 flex flex-col gap-4">
+                    <p className="text-[15px] font-medium">How much would you like to contribute?</p>
                     <AmountField
                       value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
+                      onChange={(e) => {
+                        setAmount(e.target.value);
+                        setLastContribution(null);
+                      }}
                       placeholder="0.00"
                       step="0.01"
                       min="0"
@@ -373,7 +398,14 @@ export function PoolDetail({
                     />
                     <div className="flex flex-wrap gap-2">
                       {[10, 25, 50, 100].map((v) => (
-                        <TagButton key={v} selected={amount === String(v)} onClick={() => setAmount(String(v))}>
+                        <TagButton
+                          key={v}
+                          selected={amount === String(v)}
+                          onClick={() => {
+                            setAmount(String(v));
+                            setLastContribution(null);
+                          }}
+                        >
                           ${v}
                         </TagButton>
                       ))}
@@ -388,7 +420,7 @@ export function PoolDetail({
                         block
                         disabled={!amount || Number(amount) <= 0 || contributeStatus === "working"}
                       >
-                        {contributeStatus === "working" ? "Confirming…" : "Contribute with passkey"}
+                        {contributeStatus === "working" ? "Confirming…" : "Contribute"}
                       </PillButton>
                     )}
                     <div className="flex items-center justify-between font-dm-mono text-sm text-char">
@@ -419,12 +451,12 @@ export function PoolDetail({
 
             {endedByDeadline && (
               <>
-                <h2 className="type-heading-sm">Pool ended</h2>
+                <h2 className="type-heading-sm">Fundraiser ended</h2>
                 <p className="mt-2 text-body text-char">
-                  Contributions are closed. If the goal was met, funds release to the recipient; otherwise contributors can claim a refund shortly.
+                  Contributions are closed. The funds are being settled by this fundraiser&apos;s rules — to the recipient, or back to contributors.
                 </p>
                 <PillButton variant="black" block className="mt-6" disabled>
-                  Pool ended
+                  Fundraiser ended
                 </PillButton>
               </>
             )}
@@ -434,7 +466,7 @@ export function PoolDetail({
                 <>
                   <h2 className="type-heading-sm">Claim your refund</h2>
                   <p className="mt-2 text-body text-char">
-                    This pool didn&apos;t reach its goal in time. Your contribution is available to withdraw.
+                    This fundraiser didn&apos;t reach its goal by the deadline. Your contribution is available to claim back.
                   </p>
                   {isLoggedIn ? (
                     <>
@@ -460,34 +492,51 @@ export function PoolDetail({
                 </>
               ) : (
                 <>
-                  <h2 className="type-heading-sm">Pool refunded</h2>
+                  <h2 className="type-heading-sm">Fundraiser refunded</h2>
                   <p className="mt-2 text-body text-char">
-                    This pool didn&apos;t reach its goal, so contributions were returned to everyone who gave.
+                    This fundraiser didn&apos;t reach its goal by the deadline, so every contributor can claim back what they gave.
                   </p>
                 </>
               ))}
 
             {state.status === "released" && (
               <>
-                <h2 className="type-heading-sm">Goal reached</h2>
-                <p className="mt-2 text-body text-char">This pool is complete and funds have been released.</p>
+                <h2 className="type-heading-sm">Fundraiser complete</h2>
+                <p className="mt-2 text-body text-char">The funds raised have been sent to the recipient.</p>
               </>
             )}
 
             {state.status === "cancelled" && (
               <>
-                <h2 className="type-heading-sm">Pool cancelled</h2>
-                <p className="mt-2 text-body text-char">This pool is no longer accepting contributions.</p>
+                <h2 className="type-heading-sm">Fundraiser cancelled</h2>
+                <p className="mt-2 text-body text-char">This fundraiser is no longer accepting contributions.</p>
               </>
             )}
 
             {errorMessage && <FormMessage className="mt-5">{errorMessage}</FormMessage>}
 
             <PillButton variant="outlined" block onClick={copyLink} className="mt-4">
-              {copied ? "Link copied" : "Share pool"}
+              {copied ? "Link copied" : "Share fundraiser"}
             </PillButton>
 
-            <p className="mt-6 border-t border-oat pt-5 text-center text-sm text-char">Funds secured in on-chain escrow</p>
+            {/* Transparency: what contributors are signing up for */}
+            <div className="mt-6 border-t border-oat pt-5 text-sm">
+              <p className="font-medium">How this fundraiser works</p>
+              <dl className="mt-3 space-y-3 text-char">
+                <div>
+                  <dt className="text-ink-black">If the goal is reached</dt>
+                  <dd>{rule.atGoal}</dd>
+                </div>
+                <div>
+                  <dt className="text-ink-black">If the deadline passes before the goal</dt>
+                  <dd>{rule.atDeadline}</dd>
+                </div>
+                <div>
+                  <dt className="text-ink-black">Until then</dt>
+                  <dd>Contributions are held in onchain escrow. No one can withdraw them early.</dd>
+                </div>
+              </dl>
+            </div>
           </SurfaceCard>
         </div>
       </div>

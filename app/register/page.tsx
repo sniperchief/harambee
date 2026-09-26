@@ -79,7 +79,7 @@ function RegisterForm() {
     <AuthLayout
       eyebrow="Get started"
       title="Create account"
-      lead="A passkey and a name — that’s all it takes. Your wallet is created for you."
+      lead="A passkey and a name — that’s all it takes to start raising or contributing."
       after={errorMsg && <FormMessage className="mt-6">{errorMsg}</FormMessage>}
     >
       <form onSubmit={handleRegister} className="flex flex-col gap-4">
@@ -116,7 +116,7 @@ function RegisterForm() {
             className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer accent-ink-black"
           />
           <span>
-            I agree that funds are held in smart-contract escrow and released only when a pool&apos;s conditions are met.
+            I agree that contributions are held in escrow and released only when a fundraiser&apos;s rules are met.
           </span>
         </label>
 

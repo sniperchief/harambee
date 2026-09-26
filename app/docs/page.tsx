@@ -5,18 +5,17 @@ import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { Section as PageSection, SectionDivider } from "@/components/design/Section";
 import { SurfaceCard, WarmCard } from "@/components/design/Card";
 import { Tag } from "@/components/design/Tag";
-import { PillLink } from "@/components/design/PillButton";
 
 export const metadata: Metadata = {
   title: "Documentation — Harambee",
   description:
-    "How Harambee works: the pooling lifecycle, smart-contract escrow, the two-wallet custody model, passkey contributions, and what's live today.",
+    "How Harambee works: the fundraiser lifecycle, onchain escrow on Arc, the two-wallet custody model, passkey contributions, and what's live today.",
 };
 
 const TOC = [
   { id: "overview", label: "Overview" },
   { id: "stack", label: "Architecture & stack" },
-  { id: "lifecycle", label: "Pool lifecycle" },
+  { id: "lifecycle", label: "Fundraiser lifecycle" },
   { id: "contracts", label: "Smart contracts" },
   { id: "custody", label: "Two-wallet custody" },
   { id: "gasless", label: "Network fees" },
@@ -84,9 +83,9 @@ export default async function DocsPage() {
         <Tag>Documentation</Tag>
         <h1 className="type-display mt-6 max-w-4xl">How Harambee works</h1>
         <p className="type-subheading mt-6 max-w-2xl opacity-80">
-          A technical walkthrough of the whole system — from the smart-contract escrow that holds
-          every pool, to the passkey wallets that fund it, to what&apos;s live today. Built on
-          Circle&apos;s Arc network, settled in USDC.
+          A technical walkthrough of the whole system — from the onchain escrow that holds every
+          fundraiser&apos;s contributions, to the passkey wallets contributors give from, to
+          what&apos;s live today. Powered by Arc, settled in USDC.
         </p>
       </PageSection>
 
@@ -117,15 +116,17 @@ export default async function DocsPage() {
             <div className="mt-6 space-y-4 text-body text-ink-black/80">
               <p>
                 <span className="font-semibold text-ink-black">Harambee</span> — Swahili for &ldquo;all
-                pull together&rdquo; — is group-pooling for money toward a shared goal. Someone
-                creates a pool with a target and a deadline, shares one link, and contributors fund
-                it. Money is held in a smart-contract escrow and leaves it only by the pool&apos;s
-                rules: released to the recipient, or refunded to the contributors.
+                pull together&rdquo; — is a cross-border fundraising platform. An organizer creates a
+                fundraiser with a goal and a deadline, shares one link, and people anywhere in the world
+                contribute in USDC. Everyone sees the amount raised in real time. Contributions are held
+                in an onchain escrow and leave it only by the fundraiser&apos;s rules: paid out to the
+                recipient, or refunded to the contributors.
               </p>
               <p>
                 The design goal is that a non-crypto user never has to think about crypto. They sign
                 in with a passkey (Face ID / fingerprint), see balances in plain dollars, and pay only a
-                few cents in network fees. The blockchain is plumbing, not the product.
+                few cents in network fees. Arc is the infrastructure that processes contributions and
+                runs the escrow; it is plumbing, not the product.
               </p>
             </div>
           </section>
@@ -136,7 +137,7 @@ export default async function DocsPage() {
               <li>
                 <span className="font-semibold text-ink-black">On-chain (Arc mainnet).</span> One Solidity
                 contract, <Code>PoolEscrow</Code>, holds and moves funds. Arc&apos;s native currency{" "}
-                <em>is</em> USDC (18 decimals at the protocol level), so pools use native-value
+                <em>is</em> USDC (18 decimals at the protocol level), so contributions use native-value
                 transfers, not ERC-20 <Code>transferFrom</Code>.
               </li>
               <li>
@@ -147,67 +148,70 @@ export default async function DocsPage() {
               </li>
               <li>
                 <span className="font-semibold text-ink-black">App (Next.js 16 + Supabase).</span> The web
-                app (App Router, TypeScript, Tailwind) plus a Postgres database that mirrors on-chain
+                app (App Router, TypeScript, Tailwind) plus a Postgres database that mirrors onchain
                 state for fast reads. The contract is always the source of truth — Supabase is synced
                 from it after every state change, never the other way around.
               </li>
             </ul>
           </Section>
 
-          <Section id="lifecycle" title="The pool lifecycle" eyebrow="Flow">
-            <p>Every pool moves through the same path:</p>
+          <Section id="lifecycle" title="The fundraiser lifecycle" eyebrow="Flow">
+            <p>
+              Every fundraiser moves through the same path. (In code and in the contract a fundraiser is
+              called a <Code>pool</Code>.)
+            </p>
             <ol className="space-y-3">
               <li>
-                <span className="font-semibold text-ink-black">1. Create.</span> The creator sets a title,
-                target, deadline, release mode, and recipient (defaulting to their own wallet). The
-                app calls <Code>createPool</Code> on-chain, then stores the pool with its real
-                on-chain id and a shareable link.
+                <span className="font-semibold text-ink-black">1. Create.</span> The organizer sets a
+                name, fundraising goal, deadline, release rule, and recipient (defaulting to their own
+                wallet). The app calls <Code>createPool</Code> onchain, then stores the fundraiser with
+                its real onchain id and a shareable link.
               </li>
               <li>
                 <span className="font-semibold text-ink-black">2. Contribute.</span> Anyone with the link
                 signs in with a passkey and contributes. Each contribution calls{" "}
                 <Code>contribute(poolId)</Code>, which holds the funds in the escrow contract and
-                records the contributor. The server then checks the transaction on-chain before
-                showing it in the pool&apos;s history.
+                records the contributor. The server then checks the transaction onchain before
+                showing it in the fundraiser&apos;s recent contributions.
               </li>
               <li>
-                <span className="font-semibold text-ink-black">3. Release or refund.</span> When the target
-                is hit (or the deadline passes, depending on release mode), the escrow either releases
-                everything raised to the recipient or marks the pool refundable, so each contributor
-                can take back exactly what they put in. The app checks open pools so deadline-based
+                <span className="font-semibold text-ink-black">3. Release or refund.</span> When the goal
+                is reached (or the deadline passes, depending on the release rule), the escrow either
+                pays everything raised to the recipient or marks the fundraiser refundable, so each
+                contributor can take back exactly what they put in. The app checks open fundraisers so deadline-based
                 outcomes fire on their own, with no manual trigger.
               </li>
             </ol>
           </Section>
 
-          <Section id="contracts" title="Smart contracts" eyebrow="On-chain">
+          <Section id="contracts" title="Smart contracts" eyebrow="Onchain">
             <p>
               <span className="font-semibold text-ink-black">PoolEscrow</span> is the custody + release
               contract. Key functions:
             </p>
             <ul className="space-y-2">
               <li>
-                <Code>createPool(target, deadline, recipient, releaseMode)</Code> — opens a pool and
+                <Code>createPool(target, deadline, recipient, releaseMode)</Code> — opens a fundraiser and
                 emits its id in <Code>PoolCreated</Code>.
               </li>
               <li>
-                <Code>contribute(poolId)</Code> — payable; adds to the pool total and records{" "}
+                <Code>contribute(poolId)</Code> — payable; adds to the fundraiser&apos;s total and records{" "}
                 <Code>msg.sender</Code>&apos;s contribution. The funds stay in the contract.
               </li>
               <li>
                 <Code>checkAndRelease(poolId)</Code> — permissionless; enforces the release rule
-                (target met, or deadline passed) and either pays everything raised to the recipient or
-                flips the pool to refundable.
+                (goal reached, or deadline passed) and either pays everything raised to the recipient or
+                flips the fundraiser to refundable.
               </li>
               <li>
-                <Code>refund(poolId)</Code> — pull-based; once a pool is refundable, each contributor
+                <Code>refund(poolId)</Code> — pull-based; once a fundraiser is refundable, each contributor
                 claims back exactly what they contributed, once.
               </li>
             </ul>
             <p>
-              Three <span className="font-semibold text-ink-black">release modes</span> are supported:
-              release on target-or-deadline (whichever is first), on target only (refund if the
-              deadline beats it), or at the deadline only.
+              Three <span className="font-semibold text-ink-black">release rules</span> are supported:
+              pay out when the goal is reached or at the deadline (whichever is first), only if the
+              goal is reached (refund if the deadline beats it), or at the deadline only.
             </p>
             <p>
               The contract has no owner and no admin functions: nobody, including Harambee, can move
@@ -240,7 +244,7 @@ export default async function DocsPage() {
             <Callout title="Why this split is the interesting part">
               It&apos;s also the fork the roadmap builds on: a future credit-card contributor has no
               passkey wallet, so their contribution can&apos;t be self-custodial — the platform would
-              custody it and track their share off-chain. Two lanes, one pool. See{" "}
+              custody it and track their share off-chain. Two lanes, one fundraiser. See{" "}
               <a href="#roadmap" className="font-semibold text-ink-black underline underline-offset-4">
                 Roadmap
               </a>
@@ -274,9 +278,10 @@ export default async function DocsPage() {
 
           <Section id="currency" title="Local-currency display" eyebrow="Money">
             <p>
-              A pool can optionally show its value in a local currency (NGN, KES, GHS, and others). At
+              A fundraiser can optionally show its value in a local currency (NGN, KES, GHS, and others), which
+              helps when contributors live in different countries. At
               release time the released USDC amount is converted using a live public exchange-rate
-              feed and shown alongside the real on-chain figure.
+              feed and shown alongside the real onchain figure.
             </p>
             <Callout tone="warning" title="Informational only — not a payout">
               This number does not move real fiat. Settlement stays in USDC. Circle&apos;s StableFX
@@ -326,8 +331,8 @@ export default async function DocsPage() {
             <ul className="space-y-2">
               <li>
                 <span className="font-semibold text-ink-black">Credit-card contributions.</span> Let
-                non-crypto users chip in with a card: a card payment on-ramp mints USDC, the platform
-                routes it into the pool on the contributor&apos;s behalf (custodial), and their share is
+                non-crypto users contribute with a card: a card payment on-ramp mints USDC, the platform
+                routes it into the fundraiser on the contributor&apos;s behalf (custodial), and their share is
                 tracked off-chain. This is the custody fork described above.
               </li>
               <li>
@@ -341,9 +346,6 @@ export default async function DocsPage() {
                 custodial lane.
               </li>
             </ul>
-            <div className="pt-2">
-              <PillLink href={isLoggedIn ? "/pools/new" : "/register"}>Start a pool</PillLink>
-            </div>
           </Section>
         </article>
       </main>

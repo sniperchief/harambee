@@ -1,10 +1,10 @@
 # Harambee
 
-**Pool together. Give together. Achieve together.**
+**Raise money together, from anywhere.**
 
-Harambee — Swahili for *"all pull together"* — is a group-pooling payments app: a calm, trustworthy way for a group to collect money toward a shared goal. Someone creates a pool with a target and a deadline, shares one link, and contributors fund it. Money is held in a smart-contract escrow and leaves it only by the pool's rules: released to the recipient, or refunded to the contributors.
+Harambee — Swahili for *"all pull together"* — is a cross-border fundraising platform. An organizer creates a fundraiser with a goal and a deadline, shares one link, and people in any country contribute in USDC instead of sending international bank transfers. Everyone sees the amount raised in real time. Contributions are held in an onchain escrow and leave it only by the fundraiser's rules: paid out to the recipient, or refunded to the contributors.
 
-Built on **Circle's Arc mainnet**, settled in **USDC**, funded with **passkeys**, with network fees of a few cents paid in USDC.
+Powered by **Arc mainnet**, settled in **USDC**, with contributions made using **passkeys** and network fees of a few cents paid in USDC. (In the code and the contract, a fundraiser is called a *pool*.)
 
 🔗 **Live demo:** https://harambee-flame.vercel.app
 📖 **Technical docs:** https://harambee-flame.vercel.app/docs
@@ -13,25 +13,28 @@ Built on **Circle's Arc mainnet**, settled in **USDC**, funded with **passkeys**
 
 ## The problem
 
-Group money collections — weddings, school fees, family emergencies, community projects, savings circles — usually run on trust and a spreadsheet. Who paid? Where's the money sitting? Can the organizer be trusted not to dip in? What if we don't hit the goal?
+When someone needs to raise money — for medical expenses, disaster relief, a funeral, tuition fees, a community project or family support — their supporters are often spread across different countries. International bank transfers can be slow and expensive, and informal collections run on trust and a spreadsheet. Who gave? Where's the money sitting? Can the organizer be trusted not to dip in? What if we don't reach the goal?
 
-Harambee replaces that trust gap with an on-chain escrow: no single person can withdraw early, everyone can see the total, and the pool's rules — set when it's created — decide whether the money is released or refunded.
+Harambee lets people contribute in USDC from anywhere and replaces the trust gap with an onchain escrow: no single person can withdraw early, everyone can see the amount raised in real time, and the fundraiser's rules — set when it's created — decide whether the money goes to the recipient or back to contributors.
 
 ## What it does
 
-- **Create a pool** in about a minute — a title, a target, a deadline. No bank forms, no crypto jargon.
-- **Share one link.** Anyone can contribute by signing in with a **passkey** (Face ID / fingerprint) — no app to download, no seed phrase to write down.
+- **Create a fundraising campaign** in about a minute — a name, a fundraising goal, a deadline. No bank forms, no crypto jargon.
+- **Raise from anywhere.** Share one link; anyone in any country can contribute in USDC by signing in with a **passkey** (Face ID / fingerprint) — no app to download, no international bank transfer.
+- **Real-time progress.** Everyone sees the amount raised, the number of contributors and recent contributions.
 - **Funds are held in escrow**, not a personal account.
-- **Automatic release** the moment the target is hit (or at the deadline, depending on the pool's release mode).
-- **Refunds** if a "target only" pool misses its goal — every contributor can claim back exactly what they put in.
-- **Tiny fees.** Contributors pay a few cents of network fee in USDC from their own wallet; creating a pool is free.
-- **Local-currency display** — a pool can show its value in NGN, KES, GHS and others using live FX rates (informational; settlement stays in USDC).
+- **Automatic payout** the moment the goal is reached (or at the deadline, depending on the fundraiser's release rule).
+- **Refunds** if an "only if the goal is reached" fundraiser misses its goal — every contributor can claim back exactly what they gave.
+- **Tiny fees.** Contributors pay a few cents of network fee in USDC from their own balance; creating a fundraiser is free.
+- **Local-currency display** — a fundraiser can show its value in NGN, KES, GHS and others using live FX rates (informational; settlement stays in USDC).
 
 ## How it works
 
-1. **Create** — the creator sets the goal; the app calls `createPool` on-chain and returns a shareable link.
-2. **Contribute** — each contributor signs `contribute(poolId)` with their own passkey wallet; the USDC is held in the escrow contract. The server verifies the transaction on-chain before recording it.
-3. **Release or refund** — when the target is met or the deadline passes, the escrow either releases everything raised to the recipient or marks the pool refundable so each contributor can claim back their own contribution. The app (and a cron) checks open pools so deadline-based outcomes fire on their own.
+In the code and the contract, a fundraiser is called a *pool*.
+
+1. **Create** — the organizer sets the fundraising goal and deadline; the app calls `createPool` onchain and returns a shareable link.
+2. **Contribute** — each contributor signs `contribute(poolId)` with their own passkey wallet; the USDC is held in the escrow contract. The server verifies the transaction onchain before recording it.
+3. **Pay out or refund** — when the goal is reached or the deadline passes, the escrow either pays everything raised to the recipient or marks the fundraiser refundable so each contributor can claim back their own contribution. The app (and a cron) checks open fundraisers so deadline-based outcomes fire on their own.
 
 ## Built on Circle
 
@@ -39,14 +42,14 @@ Harambee leans on the Circle stack end-to-end:
 
 | Product | Used for |
 |---|---|
-| **Arc** (mainnet, chain 5042) | The chain. Arc's native currency *is* USDC, so pools use native-value transfers — no ERC-20 approvals. |
+| **Arc** (mainnet, chain 5042) | The chain. Arc's native currency *is* USDC, so contributions use native-value transfers — no ERC-20 approvals. |
 | **Modular Wallets + Passkeys** | Self-custodial ERC-4337 smart accounts owned by a WebAuthn passkey — contributors' wallets. |
 | **Developer-Controlled Wallets** | A server-side platform wallet that submits `createPool` / `checkAndRelease`. |
 | **Smart Contract Platform** | Deploying and reading the escrow contract. |
 
 ## Smart contracts
 
-- **`PoolEscrow.sol`** — custody + release, and nothing else. `createPool`, `contribute` (payable; funds stay in the contract), `checkAndRelease` (permissionless; enforces the pool's rule), and pull-based `refund` (each contributor gets back exactly their own contribution, once). Three release modes: target-or-deadline, target-only, deadline-only. No owner, no admin functions.
+- **`PoolEscrow.sol`** — custody + release, and nothing else. `createPool`, `contribute` (payable; funds stay in the contract), `checkAndRelease` (permissionless; enforces the pool's rule), and pull-based `refund` (each contributor gets back exactly their own contribution, once). Three release rules: goal-or-deadline, goal-only, deadline-only. No owner, no admin functions.
 
 Contract tests (`npm run test:contracts`) cover creation, contributions, every release mode, refunds, unauthorized withdrawals and re-entrancy.
 
@@ -122,7 +125,7 @@ npm run check:mainnet    # read-only: validates env, chain, USDC, escrow, platfo
 5. In the Circle console, add the production domain to the client key's allowed domains. (No Gas Station policy: contributors pay their own gas.)
 6. Set all variables from `.env.local.example` in the hosting environment and run `npm run check:mainnet`.
 7. Deploy the app. Optionally schedule `GET /api/cron/check-pools` (Vercel Cron sends `CRON_SECRET` automatically).
-8. Test the full flow with a small real amount: create a pool, contribute, and confirm the release (or refund) on explorer.arc.io.
+8. Test the full flow with a small real amount: create a fundraiser, contribute, and confirm the payout (or refund) on explorer.arc.io.
 
 ## Roadmap
 

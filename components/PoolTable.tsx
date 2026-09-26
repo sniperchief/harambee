@@ -17,10 +17,10 @@ export type PoolSummary = {
 
 export type PoolDisplay = { label: string; tone: TagTone; meter: "ink" | "char" | "oat"; timing: string };
 
-// How a pool reads at a glance, everywhere it appears: live pools in ink
-// (Marigold "Closing soon" in the last 3 days), released in cream with a char
-// bar, refunded / ended in white. Pass `ended` when the caller knows the pool
-// has stopped taking contributions even though its status still reads "open".
+// How a fundraiser reads at a glance, everywhere it appears: live ones in ink
+// (Marigold "Closing soon" in the last 3 days), completed in cream with a char
+// bar, refunded / ended in white. Pass `ended` when the caller knows the
+// fundraiser has stopped taking contributions though its status still reads "open".
 export function poolDisplay(status: PoolStatus, deadline: string, ended = false): PoolDisplay {
   const time = timeUntil(deadline);
   switch (status) {
@@ -30,7 +30,7 @@ export function poolDisplay(status: PoolStatus, deadline: string, ended = false)
         ? { label: "Closing soon", tone: "marigold", meter: "ink", timing: time.label }
         : { label: "Open", tone: "black", meter: "ink", timing: time.label };
     case "released":
-      return { label: "Released", tone: "cream", meter: "char", timing: "Released" };
+      return { label: "Completed", tone: "cream", meter: "char", timing: "Completed" };
     case "refunded":
       return { label: "Refunded", tone: "white", meter: "oat", timing: "Ended" };
     default:
@@ -40,12 +40,12 @@ export function poolDisplay(status: PoolStatus, deadline: string, ended = false)
 
 const COLS = "md:grid md:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.75fr)_minmax(0,0.6fr)] md:items-center md:gap-6";
 
-/** Pools as a ledger: a white card with a mono header row and dashed rules. */
+/** Fundraisers as a ledger: a white card with a mono header row and dashed rules. */
 export function PoolTable({ pools }: { pools: PoolSummary[] }) {
   return (
     <div className="overflow-hidden rounded-[20px] bg-bone-white">
       <div className={`hidden border-b border-ink-black px-6 py-5 text-char ${COLS}`}>
-        <span className="type-eyebrow !text-xs">Pool</span>
+        <span className="type-eyebrow !text-xs">Fundraiser</span>
         <span className="type-eyebrow !text-xs">Progress</span>
         <span className="type-eyebrow !text-xs">Raised</span>
         <span className="type-eyebrow !text-xs">Status</span>
@@ -75,7 +75,7 @@ export function PoolTable({ pools }: { pools: PoolSummary[] }) {
                 <div>
                   <Meter value={pct} tone={s.meter} label={`${Math.round(pct)}% funded`} />
                   <p className="mt-2 font-dm-mono text-xs text-char">
-                    {Math.round(pct)}% of ${formatUsdc(pool.target_amount, { decimals: 0 })}
+                    {Math.round(pct)}% of ${formatUsdc(pool.target_amount, { decimals: 0 })} goal
                   </p>
                 </div>
                 <p className="font-dm-mono text-lg font-medium tnum">${formatUsdc(pool.current_amount)}</p>

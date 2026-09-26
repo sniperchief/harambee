@@ -11,7 +11,7 @@ type StatusTab = "all" | "open" | "released" | "refunded";
 const STATUS_TABS: { key: StatusTab; label: string }[] = [
   { key: "all", label: "All" },
   { key: "open", label: "Open" },
-  { key: "released", label: "Released" },
+  { key: "released", label: "Completed" },
   { key: "refunded", label: "Refunded" },
 ];
 
@@ -26,7 +26,7 @@ export function PoolsExplorer({ pools }: { pools: PoolSummary[] }) {
   return (
     <div>
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <h1 className="type-display">All pools</h1>
+        <h1 className="type-display">All fundraisers</h1>
         <div className="flex flex-wrap gap-2 md:pb-2">
           {STATUS_TABS.map((t) => (
             <TagButton key={t.key} selected={status === t.key} onClick={() => setStatus(t.key)}>
@@ -40,16 +40,18 @@ export function PoolsExplorer({ pools }: { pools: PoolSummary[] }) {
         {filtered.length === 0 ? (
           <WarmCard className="flex flex-col items-center py-20 text-center">
             <h2 className="type-heading-sm">
-              {pools.length === 0 ? "No pools yet" : `No ${status} pools`}
+              {pools.length === 0
+                ? "No fundraisers yet"
+                : `No ${STATUS_TABS.find((t) => t.key === status)?.label.toLowerCase()} fundraisers`}
             </h2>
             <p className="mt-3 max-w-sm text-body text-char">
               {pools.length === 0
-                ? "Pools you create or contribute to will show up here."
+                ? "Fundraisers you organize or contribute to will show up here."
                 : "Try another filter."}
             </p>
             {pools.length === 0 && (
               <PillLink href="/pools/new" className="mt-8">
-                + Create a pool
+                + Create a fundraiser
               </PillLink>
             )}
           </WarmCard>

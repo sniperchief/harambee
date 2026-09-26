@@ -19,7 +19,7 @@ export async function POST(
     .single();
 
   if (error || !pool) {
-    return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+    return NextResponse.json({ error: "Fundraiser not found" }, { status: 404 });
   }
 
   try {
@@ -27,6 +27,6 @@ export async function POST(
     return NextResponse.json(result);
   } catch (err) {
     console.error("Pool sync failed:", err);
-    return NextResponse.json({ error: "Could not read the pool on-chain" }, { status: 502 });
+    return NextResponse.json({ error: "Could not read the fundraiser onchain" }, { status: 502 });
   }
 }

@@ -40,7 +40,7 @@ export default async function SettingsPage() {
           <p className="mt-4 text-body text-char">Manage your profile, wallet and preferences.</p>
 
           <div className="mt-12 space-y-12">
-            <Group title="Profile" description="How you appear to people you pool with.">
+            <Group title="Profile" description="How you appear to the people you raise money with.">
               <UsernameForm current={name} />
               <p className="mt-6 border-t border-oat pt-5 text-body text-char">
                 <span className="font-dm-mono text-ink-black">{shortAddress(user.modular_wallet_address) || "—"}</span>
@@ -48,7 +48,7 @@ export default async function SettingsPage() {
               </p>
             </Group>
 
-            <Group title="Wallet" description="Your self-custodial smart wallet, secured by your passkey.">
+            <Group title="Balance" description="The USDC you contribute with, secured by your passkey.">
               <WalletCard address={user.modular_wallet_address} />
             </Group>
 

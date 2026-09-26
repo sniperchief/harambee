@@ -66,7 +66,7 @@ export default async function DashboardPage() {
   const titleById = new Map(created.map((p) => [p.id, p.title]));
   const ledger = (((contribsRes as unknown as { data: Contrib[] | null }).data) ?? []).map((c) => ({
     ...c,
-    poolTitle: titleById.get(c.pool_id) ?? "Pool",
+    poolTitle: titleById.get(c.pool_id) ?? "Fundraiser",
     from: c.users?.modular_wallet_address ?? null,
   }));
 
@@ -83,10 +83,10 @@ export default async function DashboardPage() {
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <Greeting name={name} className="type-eyebrow" />
-              <h1 className="type-display mt-3">Your pools</h1>
+              <h1 className="type-display mt-3">Your fundraisers</h1>
             </div>
             <PillLink href="/pools/new" className="self-start !border-ink-black sm:self-auto">
-              + Create a pool
+              + Create a fundraiser
             </PillLink>
           </div>
 
@@ -96,17 +96,17 @@ export default async function DashboardPage() {
           </div>
 
           <div className="mt-10 grid gap-10 lg:grid-cols-3 lg:gap-8">
-            {/* Left: stats + recent pools */}
+            {/* Left: stats + recent fundraisers */}
             <div className="space-y-12 lg:col-span-2">
               <div className="grid gap-4 sm:grid-cols-3">
-                <Stat label="Total raised" value={`$${formatUsdc(totalRaised, { decimals: 0 })}`} sub="Across all your pools" />
-                <Stat label="Active pools" value={activeCount} sub="Collecting now" />
-                <Stat label="Completed" value={releasedCount} sub="Released to recipients" />
+                <Stat label="Total raised" value={`$${formatUsdc(totalRaised, { decimals: 0 })}`} sub="Across all your fundraisers" />
+                <Stat label="Active fundraisers" value={activeCount} sub="Accepting contributions" />
+                <Stat label="Completed fundraisers" value={releasedCount} sub="Funds sent to recipients" />
               </div>
 
               <section>
                 <div className="flex items-end justify-between gap-4">
-                  <h2 className="font-champ text-[30px] font-extrabold leading-tight">Recent pools</h2>
+                  <h2 className="font-champ text-[30px] font-extrabold leading-tight">Recent fundraisers</h2>
                   {recent.length > 0 && (
                     <Link href="/pools" className="border-b-[1.5px] border-ink-black pb-0.5 text-body no-underline">
                       View all
@@ -116,9 +116,9 @@ export default async function DashboardPage() {
                 <div className="mt-5">
                   {recent.length === 0 ? (
                     <WarmCard className="flex flex-col items-center py-16 text-center">
-                      <h3 className="type-heading-sm">No pools yet</h3>
+                      <h3 className="type-heading-sm">No fundraisers yet</h3>
                       <p className="mt-3 max-w-sm text-body text-char">
-                        Create your first pool and share the link. It takes about a minute.
+                        Create your first fundraiser and share the link with people anywhere. It takes about a minute.
                       </p>
                     </WarmCard>
                   ) : (
@@ -131,7 +131,7 @@ export default async function DashboardPage() {
             {/* Right: ledger */}
             <section>
               <div className="flex items-end justify-between gap-4">
-                <h2 className="font-champ text-[30px] font-extrabold leading-tight">Ledger</h2>
+                <h2 className="font-champ text-[30px] font-extrabold leading-tight">Recent contributions</h2>
                 <Link href="/activity" className="border-b-[1.5px] border-ink-black pb-0.5 text-body no-underline">
                   View all
                 </Link>

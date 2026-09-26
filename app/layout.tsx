@@ -23,9 +23,9 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Harambee — Pool together. Give together. Achieve together.",
+  title: "Harambee — Raise money together, from anywhere",
   description:
-    "Harambee is the calm way for groups to pool USDC toward a shared goal — held in escrow, then released or refunded according to the pool's rules.",
+    "Harambee is a global fundraising platform. Create a fundraiser, share one link, and receive USDC contributions from people in any country — with progress in real time and funds held in escrow until the fundraiser's rules are met.",
 };
 
 export default function RootLayout({

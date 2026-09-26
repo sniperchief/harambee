@@ -38,7 +38,7 @@ export async function POST(
     .single();
 
   if (error || !pool) {
-    return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+    return NextResponse.json({ error: "Fundraiser not found" }, { status: 404 });
   }
 
   let amountWei: bigint;
@@ -47,7 +47,7 @@ export async function POST(
   } catch (err) {
     console.error("Contribution verification failed:", err);
     return NextResponse.json(
-      { error: "We couldn't confirm this contribution on-chain." },
+      { error: "We couldn't confirm this contribution onchain." },
       { status: 400 }
     );
   }

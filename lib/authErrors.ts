@@ -63,7 +63,7 @@ export function friendlyPasskeyError(err: unknown): { message: string; cancelled
     return { cancelled: false, message: "Not enough USDC to cover this plus the network fee. Nothing was sent." };
   }
   if (has(/couldn't confirm this contribution/i)) {
-    return { cancelled: false, message: "We couldn't confirm that contribution on-chain. Refresh the page to see the latest total." };
+    return { cancelled: false, message: "We couldn't confirm that contribution onchain. Refresh the page to see the latest total." };
   }
 
   return { cancelled: false, message: "Something went wrong. Please try again." };
