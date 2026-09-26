@@ -27,9 +27,9 @@ export function AuthLayout({
       <aside className="hidden flex-col justify-between bg-ink-black px-12 py-12 text-bone-white lg:flex lg:w-1/2">
         <Logo href="/" tone="light" />
 
-        <h2 className="type-display max-w-[480px]">Pool together. Give together.</h2>
+        <h2 className="type-display max-w-[480px]">Raise money together, from anywhere.</h2>
 
-        <p className="font-dm-mono text-sm text-bone-white/80">Built on Circle Arc · Settled in USDC</p>
+        <p className="font-dm-mono text-sm text-bone-white/80">Powered by Arc · Settled in USDC</p>
       </aside>
 
       {/* Form panel */}

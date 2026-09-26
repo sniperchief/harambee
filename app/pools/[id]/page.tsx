@@ -18,7 +18,7 @@ export default async function PoolPage({ params }: { params: Promise<{ id: strin
   const { data: pool } = await supabase
     .from("pools")
     .select(
-      "id, title, description, target_amount, current_amount, deadline, status, onchain_pool_id, target_currency, local_currency_amount, fx_rate, recipient_wallet_address, release_tx_hash, created_at"
+      "id, title, description, target_amount, current_amount, deadline, status, onchain_pool_id, target_currency, local_currency_amount, fx_rate, recipient_wallet_address, release_tx_hash, release_mode, created_at"
     )
     .eq("id", id)
     .single();

@@ -15,8 +15,8 @@ export function HeroMockup() {
     <SurfaceCard className="mx-auto w-full max-w-[460px]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="type-heading-sm">Amara &amp; Kofi&apos;s Wedding</p>
-          <p className="mt-1 text-sm text-char">Closes in 9 days</p>
+          <p className="type-heading-sm">Help Amara cover her surgery</p>
+          <p className="mt-1 text-sm text-char">9 days remaining</p>
         </div>
         <Tag tone="black">Open</Tag>
       </div>
@@ -24,9 +24,9 @@ export function HeroMockup() {
       <div className="mt-8 flex items-end justify-between gap-4">
         <div>
           <p className="stat-callout__value">$8,450</p>
-          <p className="stat-callout__label mt-2">raised so far</p>
+          <p className="stat-callout__label mt-2">raised of $12,000 goal</p>
         </div>
-        <p className="type-mono pb-1 text-char" style={{ fontSize: 14 }}>of $12,000</p>
+        <p className="type-heading-sm tnum pb-1">70%</p>
       </div>
       <Meter value={70} className="mt-6" label="70% funded" />
       <p className="mt-3 text-sm">70% funded · 34 contributors</p>

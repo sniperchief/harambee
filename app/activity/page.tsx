@@ -18,11 +18,11 @@ type TimelineEvent = {
   at: string;
 };
 
-// Outcomes read as Tags, in the same tones as the Pools table
-// (see poolDisplay): Released in cream, Refunded in white.
+// Outcomes read as Tags, in the same tones as the fundraisers table
+// (see poolDisplay): Completed in cream, Refunded in white.
 const EVENTS: Record<EventType, { verb: string; tag?: { label: string; tone: "cream" | "white" } }> = {
   contribution: { verb: "Contribution to" },
-  release: { verb: "Funds released for", tag: { label: "Released", tone: "cream" } },
+  release: { verb: "Funds paid out for", tag: { label: "Completed", tone: "cream" } },
   refund: { verb: "Refund available for", tag: { label: "Refunded", tone: "white" } },
   created: { verb: "You created" },
 };
@@ -55,7 +55,7 @@ export default async function ActivityPage() {
       type: "contribution",
       amount: c.amount,
       poolId: c.pools?.id ?? c.pool_id,
-      poolTitle: c.pools?.title ?? "Pool",
+      poolTitle: c.pools?.title ?? "Fundraiser",
       at: c.created_at,
     });
   }
@@ -79,16 +79,16 @@ export default async function ActivityPage() {
       <TopNav walletAddress={user.modular_wallet_address} name={displayName(user)} />
       <main>
         <Section className="!pt-14" innerClassName="max-w-[880px]">
-          <p className="type-eyebrow">Your ledger</p>
+          <p className="type-eyebrow">Your history</p>
           <h1 className="type-display mt-3">Activity</h1>
-          <p className="mt-4 text-body text-char">Every contribution, release and refund across your pools.</p>
+          <p className="mt-4 text-body text-char">Every contribution, payout and refund across your fundraisers.</p>
 
           <div className="mt-12">
             {events.length === 0 ? (
               <WarmCard className="flex flex-col items-center py-20 text-center">
                 <h3 className="type-heading-sm">No activity yet</h3>
                 <p className="mt-3 max-w-sm text-body text-char">
-                  Once you create or contribute to a pool, the history shows up here.
+                  Once you create or contribute to a fundraiser, the history shows up here.
                 </p>
               </WarmCard>
             ) : (

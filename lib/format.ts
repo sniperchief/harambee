@@ -51,7 +51,7 @@ export function shortAddress(addr: string | null | undefined): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
-/** "in 12 days", "in 4 hours", "Closed" */
+/** "12 days remaining", "4 hours remaining", "Closed" */
 export function timeUntil(deadline: string): { label: string; urgent: boolean; past: boolean } {
   const now = Date.now();
   const then = new Date(deadline).getTime();
@@ -59,11 +59,11 @@ export function timeUntil(deadline: string): { label: string; urgent: boolean; p
   if (diff <= 0) return { label: "Closed", urgent: false, past: true };
   const days = Math.floor(diff / 86_400_000);
   const hours = Math.floor(diff / 3_600_000);
-  if (days >= 2) return { label: `${days} days left`, urgent: days <= 3, past: false };
-  if (days === 1) return { label: "1 day left", urgent: true, past: false };
-  if (hours >= 1) return { label: `${hours} hours left`, urgent: true, past: false };
+  if (days >= 2) return { label: `${days} days remaining`, urgent: days <= 3, past: false };
+  if (days === 1) return { label: "1 day remaining", urgent: true, past: false };
+  if (hours >= 1) return { label: `${hours} hours remaining`, urgent: true, past: false };
   const mins = Math.max(1, Math.floor(diff / 60_000));
-  return { label: `${mins} min left`, urgent: true, past: false };
+  return { label: `${mins} min remaining`, urgent: true, past: false };
 }
 
 export function formatDate(value: string): string {
@@ -96,6 +96,35 @@ export function timeAgo(value: string): string {
 }
 
 export type PoolStatus = "open" | "released" | "refunded" | "cancelled";
+
+export type ReleaseMode = "threshold_or_deadline" | "threshold_only" | "deadline_only";
+
+// A fundraiser's release rule in plain words: what the organizer picks from,
+// and what contributors are told happens at the goal and at the deadline.
+// Mirrors PoolEscrow.checkAndRelease.
+export const RELEASE_RULES: Record<
+  ReleaseMode,
+  { title: string; body: string; atGoal: string; atDeadline: string }
+> = {
+  threshold_or_deadline: {
+    title: "Goal or deadline, whichever comes first",
+    body: "Funds go to the recipient as soon as the goal is reached, or at the deadline with whatever was raised.",
+    atGoal: "Funds go to the recipient as soon as the goal is reached.",
+    atDeadline: "Whatever was raised goes to the recipient.",
+  },
+  threshold_only: {
+    title: "Only if the goal is reached",
+    body: "Funds go to the recipient the moment the goal is reached. If the deadline passes first, contributors get their money back.",
+    atGoal: "Funds go to the recipient the moment the goal is reached.",
+    atDeadline: "Every contributor can claim back exactly what they gave.",
+  },
+  deadline_only: {
+    title: "At the deadline",
+    body: "Accept contributions right up to the deadline, then send whatever was raised to the recipient.",
+    atGoal: "Contributions stay open until the deadline.",
+    atDeadline: "Whatever was raised goes to the recipient.",
+  },
+};
 
 export function statusMeta(status: PoolStatus): {
   label: string;

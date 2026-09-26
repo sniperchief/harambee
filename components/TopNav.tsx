@@ -8,7 +8,7 @@ import { shortAddress } from "@/lib/format";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/pools", label: "Pools" },
+  { href: "/pools", label: "Fundraisers" },
 ];
 
 function initials(name: string): string {

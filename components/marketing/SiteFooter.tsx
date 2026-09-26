@@ -22,7 +22,7 @@ export function SiteFooter() {
         <div className="flex flex-col gap-12 md:flex-row md:justify-between">
           <div className="max-w-sm">
             <Logo href={null} tone="light" />
-            <p className="type-sub-display mt-6">Pool together. Give together. Achieve together.</p>
+            <p className="type-sub-display mt-6">Raise money together, from anywhere.</p>
           </div>
           <div className="grid grid-cols-2 gap-x-16 gap-y-8">
             {COLUMNS.map((col) => (
@@ -43,8 +43,8 @@ export function SiteFooter() {
         </div>
         <hr className="mt-20 border-0 border-t border-bone-white/25" />
         <div className="mt-6 flex flex-col gap-2 text-sm text-bone-white/60 sm:flex-row sm:justify-between">
-          <p>© {new Date().getFullYear()} Harambee. Funds held in audited smart-contract escrow.</p>
-          <p>Built on Circle Arc · Settled in USDC</p>
+          <p>© {new Date().getFullYear()} Harambee. Contributions held in onchain escrow.</p>
+          <p>Powered by Arc · Settled in USDC</p>
         </div>
       </div>
     </footer>

@@ -8,7 +8,7 @@ import { PillButton } from "@/components/design/PillButton";
 import { SurfaceCard } from "@/components/design/Card";
 import { Tag, TagButton } from "@/components/design/Tag";
 import { FieldShell, InputField, TextAreaField, SelectField, FormMessage } from "@/components/design/InputField";
-import { formatUsdc, formatLocal, formatDateTime } from "@/lib/format";
+import { formatUsdc, formatLocal, formatDateTime, RELEASE_RULES, type ReleaseMode } from "@/lib/format";
 import { useFxRate } from "@/lib/useFxRate";
 
 const CURRENCIES = ["NGN", "KES", "GHS", "USD", "GBP", "EUR", "ZAR"];
@@ -25,34 +25,18 @@ const DURATIONS = [
   { key: "custom", label: "Custom", ms: 0 },
 ] as const;
 
-const RELEASE_MODES = [
-  {
-    key: "threshold_or_deadline",
-    title: "Target or deadline",
-    body: "Release as soon as the target is hit — or at the deadline, whatever comes first.",
-  },
-  {
-    key: "threshold_only",
-    title: "Only when target is reached",
-    body: "Funds release the moment the goal is met. If the deadline passes first, contributors are refunded.",
-  },
-  {
-    key: "deadline_only",
-    title: "Only at the deadline",
-    body: "Collect right up to the deadline, then release whatever has been raised.",
-  },
-] as const;
+const RELEASE_MODES = (Object.keys(RELEASE_RULES) as ReleaseMode[]).map((key) => ({ key, ...RELEASE_RULES[key] }));
 
-type Mode = (typeof RELEASE_MODES)[number]["key"];
+type Mode = ReleaseMode;
 
-const STEPS = ["Goal", "Terms", "Review"];
+const STEPS = ["Goal", "Deadline", "Review"];
 
-// "NEW POOL · STEP 1 OF 3" + Cancel, over three segment bars with labels.
+// "NEW FUNDRAISER · STEP 1 OF 3" + Cancel, over three segment bars with labels.
 function StepHeader({ step, done }: { step: number; done: boolean }) {
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
-        <p className="type-eyebrow">{done ? "New pool · Live" : `New pool · Step ${step + 1} of ${STEPS.length}`}</p>
+        <p className="type-eyebrow">{done ? "New fundraiser · Live" : `New fundraiser · Step ${step + 1} of ${STEPS.length}`}</p>
         {!done && (
           <Link href="/dashboard" className="border-b-[1.5px] border-ink-black pb-0.5 text-body no-underline">
             Cancel
@@ -129,12 +113,12 @@ export function CreatePoolForm() {
         }),
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? "Failed to create pool");
+      if (!response.ok) throw new Error(body.error ?? "Couldn't create the fundraiser. Please try again.");
       setCreatedId(body.pool.id);
       setStatus("done");
     } catch (err) {
       setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Failed to create pool");
+      setErrorMessage(err instanceof Error ? err.message : "Couldn't create the fundraiser. Please try again.");
     }
   }
 
@@ -147,21 +131,21 @@ export function CreatePoolForm() {
         <StepHeader step={STEPS.length - 1} done />
         <SurfaceCard className="mt-8 sm:!p-10">
           <Tag tone="black" small>Live</Tag>
-          <h2 className={`${CARD_TITLE} mt-5`}>Your pool is live</h2>
+          <h2 className={`${CARD_TITLE} mt-5`}>Your fundraiser is live</h2>
           <p className="mt-3 text-body text-char">
-            Share it to start collecting. Every contribution is held safely in escrow until the pool&apos;s rules are met.
+            Share it with people anywhere to start receiving contributions. Every contribution is held in escrow until the fundraiser&apos;s rules are met.
           </p>
 
           <dl className="mt-8 border-t border-ink-black">
             {[
-              ["Pool", title],
+              ["Fundraiser", title],
               [
-                "Target",
+                "Fundraising goal",
                 `$${formatUsdc(targetAmount)} USDC${
                   targetCurrency && fxRate !== null ? ` · ≈ ${formatLocal(Number(targetAmount) * fxRate, targetCurrency)}` : ""
                 }`,
               ],
-              ["Closes", deadlineIso ? formatDateTime(deadlineIso) : "—"],
+              ["Deadline", deadlineIso ? formatDateTime(deadlineIso) : "—"],
             ].map(([k, v]) => (
               <div key={k} className="flex items-start justify-between gap-4 border-b border-dashed border-oat py-4">
                 <dt className="text-char">{k}</dt>
@@ -179,7 +163,7 @@ export function CreatePoolForm() {
             <div className="w-full min-w-0">
               <p className="text-sm text-char">Share the link, or let people scan the code in person.</p>
               <div className="mt-3 flex items-center gap-2">
-                <InputField readOnly value={link} aria-label="Pool link" className="min-w-0 font-dm-mono text-sm" />
+                <InputField readOnly value={link} aria-label="Fundraiser link" className="min-w-0 font-dm-mono text-sm" />
                 <CopyButton text={link} />
               </div>
             </div>
@@ -191,7 +175,7 @@ export function CreatePoolForm() {
             Back to dashboard
           </PillButton>
           <PillButton onClick={() => router.push(`/pools/${createdId}`)} className="!border-ink-black">
-            View pool
+            View fundraiser
           </PillButton>
         </div>
       </div>
@@ -211,15 +195,15 @@ export function CreatePoolForm() {
         {/* Step 1 — Goal */}
         {step === 0 && (
           <div className="animate-fade-in-still flex flex-col gap-6">
-            <h2 className={CARD_TITLE}>What are you raising for?</h2>
-            <FieldShell label="Pool name" htmlFor="title">
-              <InputField id="title" placeholder="e.g. Amara & Kofi's Wedding Fund" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            <h2 className={CARD_TITLE}>What are you raising money for?</h2>
+            <FieldShell label="Fundraiser name" htmlFor="title">
+              <InputField id="title" placeholder="e.g. Help Amara cover her surgery" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             </FieldShell>
-            <FieldShell label="Description" htmlFor="desc" hint="Optional — one sentence on what the money is for.">
-              <TextAreaField id="desc" placeholder="Helping the couple celebrate with everyone they love." value={description} onChange={(e) => setDescription(e.target.value)} />
+            <FieldShell label="Description" htmlFor="desc" hint="Optional — tell contributors what the money is for.">
+              <TextAreaField id="desc" placeholder="Amara needs surgery next month. The money raised will cover her hospital bill." value={description} onChange={(e) => setDescription(e.target.value)} />
             </FieldShell>
             <div className="grid gap-6 sm:grid-cols-2 sm:gap-4">
-              <FieldShell label="Target (USDC)" htmlFor="target">
+              <FieldShell label="Fundraising goal (USDC)" htmlFor="target">
                 <InputField
                   id="target"
                   inputMode="decimal"
@@ -250,14 +234,14 @@ export function CreatePoolForm() {
         {/* Step 2 — Terms */}
         {step === 1 && (
           <div className="animate-fade-in-still flex flex-col gap-8">
-            <h2 className={CARD_TITLE}>Where and when?</h2>
-            <FieldShell label="Recipient" htmlFor="recipient" hint="Leave blank to send the funds to your own wallet.">
+            <h2 className={CARD_TITLE}>Recipient and deadline</h2>
+            <FieldShell label="Recipient" htmlFor="recipient" hint="Who receives the funds. Leave blank to receive them yourself.">
               <InputField id="recipient" placeholder="Recipient wallet address (optional)" value={recipientWalletAddress} onChange={(e) => setRecipientWalletAddress(e.target.value)} className="font-dm-mono" />
             </FieldShell>
 
             <fieldset>
-              <legend className="text-[15px] font-medium">How long should it stay open?</legend>
-              <p className="text-sm text-char">Contributions close after this. Uses your local time.</p>
+              <legend className="text-[15px] font-medium">Deadline</legend>
+              <p className="text-sm text-char">How long the fundraiser accepts contributions. Uses your local time.</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {DURATIONS.map((d) => (
                   <TagButton key={d.key} selected={durationKey === d.key} onClick={() => setDurationKey(d.key)}>
@@ -281,7 +265,7 @@ export function CreatePoolForm() {
             </fieldset>
 
             <fieldset>
-              <legend className="text-[15px] font-medium">Release condition</legend>
+              <legend className="text-[15px] font-medium">When should the funds go to the recipient?</legend>
               <div className="mt-3 flex flex-col gap-3">
                 {RELEASE_MODES.map((m) => {
                   const active = releaseMode === m.key;
@@ -316,16 +300,16 @@ export function CreatePoolForm() {
         {/* Step 3 — Review */}
         {step === 2 && (
           <div className="animate-fade-in-still">
-            <h2 className={CARD_TITLE}>Review your pool</h2>
+            <h2 className={CARD_TITLE}>Review your fundraiser</h2>
             <p className="mt-3 text-body text-char">Check the details before it goes live.</p>
             <dl className="mt-8 border-t border-ink-black">
               {[
-                ["Name", title],
+                ["Fundraiser name", title],
                 ["Description", description || "—"],
-                ["Target", `$${formatUsdc(targetAmount)} USDC${localPreview ? ` · ≈ ${localPreview}` : ""}`],
-                ["Recipient", recipientWalletAddress || "Your own wallet"],
+                ["Fundraising goal", `$${formatUsdc(targetAmount)} USDC${localPreview ? ` · ≈ ${localPreview}` : ""}`],
+                ["Recipient", recipientWalletAddress || "You"],
                 ["Deadline", computeDeadlineIso() ? formatDateTime(computeDeadlineIso()) : "—"],
-                ["Release", RELEASE_MODES.find((m) => m.key === releaseMode)?.title ?? ""],
+                ["Release rule", RELEASE_RULES[releaseMode].title],
               ].map(([k, v]) => (
                 <div key={k} className="flex items-start justify-between gap-4 border-b border-dashed border-oat py-4">
                   <dt className="text-char">{k}</dt>
@@ -334,7 +318,7 @@ export function CreatePoolForm() {
               ))}
             </dl>
             <p className="mt-6 text-sm text-char">
-              Creating a pool deploys it to escrow on-chain. This takes a few seconds and no gas fee for you.
+              Creating your fundraiser registers it with the onchain escrow. This takes a few seconds and costs you nothing.
             </p>
             {status === "error" && <FormMessage className="mt-5">{errorMessage}</FormMessage>}
           </div>
@@ -361,7 +345,7 @@ export function CreatePoolForm() {
           </PillButton>
         ) : (
           <PillButton className="!border-ink-black" onClick={handleSubmit} disabled={status === "working"}>
-            {status === "working" ? "Creating pool…" : "Create pool"}
+            {status === "working" ? "Creating fundraiser…" : "Create fundraiser"}
           </PillButton>
         )}
       </div>

@@ -1,4 +1,4 @@
-/** Ledger meter — a pool's progress toward target on a pale cream track.
+/** Ledger meter — a fundraiser's progress toward its goal on a pale cream track.
  *  ink = live, char = released, oat = refunded / cancelled. */
 export function Meter({
   value,
