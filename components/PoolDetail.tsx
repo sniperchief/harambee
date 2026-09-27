@@ -179,7 +179,7 @@ export function PoolDetail({
         setContributeStatus("error");
         console.error("Contribution failed:", err);
         setErrorMessage(
-          closed ? "This fundraiser just closed — contributions are no longer accepted." : message
+          closed ? "This just closed — contributions are no longer accepted." : message
         );
       }
       if (closed) {
@@ -287,7 +287,7 @@ export function PoolDetail({
                 </p>
               </div>
               <div>
-                <p className="text-sm text-char">Fundraising goal</p>
+                <p className="text-sm text-char">Goal</p>
                 <p className="type-mono mt-2">
                   {pool.target_currency && fxRate !== null
                     ? formatLocal(Number(target) * fxRate, pool.target_currency)
@@ -378,7 +378,7 @@ export function PoolDetail({
 
             {canContribute && (
               <>
-                <h2 className="type-heading-sm">Contribute to this fundraiser</h2>
+                <h2 className="type-heading-sm">Contribute</h2>
                 <p className="mt-2 text-body text-char">
                   Give from anywhere in USDC. It settles in seconds; a network fee of a few cents comes from your balance.
                 </p>
@@ -451,12 +451,12 @@ export function PoolDetail({
 
             {endedByDeadline && (
               <>
-                <h2 className="type-heading-sm">Fundraiser ended</h2>
+                <h2 className="type-heading-sm">Ended</h2>
                 <p className="mt-2 text-body text-char">
-                  Contributions are closed. The funds are being settled by this fundraiser&apos;s rules — to the recipient, or back to contributors.
+                  Contributions are closed. The funds are being settled by the rules below — to the recipient, or back to contributors.
                 </p>
                 <PillButton variant="black" block className="mt-6" disabled>
-                  Fundraiser ended
+                  Ended
                 </PillButton>
               </>
             )}
@@ -466,7 +466,7 @@ export function PoolDetail({
                 <>
                   <h2 className="type-heading-sm">Claim your refund</h2>
                   <p className="mt-2 text-body text-char">
-                    This fundraiser didn&apos;t reach its goal by the deadline. Your contribution is available to claim back.
+                    The goal wasn&apos;t reached by the deadline. Your contribution is available to claim back.
                   </p>
                   {isLoggedIn ? (
                     <>
@@ -492,36 +492,36 @@ export function PoolDetail({
                 </>
               ) : (
                 <>
-                  <h2 className="type-heading-sm">Fundraiser refunded</h2>
+                  <h2 className="type-heading-sm">Refunded</h2>
                   <p className="mt-2 text-body text-char">
-                    This fundraiser didn&apos;t reach its goal by the deadline, so every contributor can claim back what they gave.
+                    The goal wasn&apos;t reached by the deadline, so every contributor can claim back what they gave.
                   </p>
                 </>
               ))}
 
             {state.status === "released" && (
               <>
-                <h2 className="type-heading-sm">Fundraiser complete</h2>
+                <h2 className="type-heading-sm">Complete</h2>
                 <p className="mt-2 text-body text-char">The funds raised have been sent to the recipient.</p>
               </>
             )}
 
             {state.status === "cancelled" && (
               <>
-                <h2 className="type-heading-sm">Fundraiser cancelled</h2>
-                <p className="mt-2 text-body text-char">This fundraiser is no longer accepting contributions.</p>
+                <h2 className="type-heading-sm">Cancelled</h2>
+                <p className="mt-2 text-body text-char">This is no longer accepting contributions.</p>
               </>
             )}
 
             {errorMessage && <FormMessage className="mt-5">{errorMessage}</FormMessage>}
 
             <PillButton variant="outlined" block onClick={copyLink} className="mt-4">
-              {copied ? "Link copied" : "Share fundraiser"}
+              {copied ? "Link copied" : "Share"}
             </PillButton>
 
             {/* Transparency: what contributors are signing up for */}
             <div className="mt-6 border-t border-oat pt-5 text-sm">
-              <p className="font-medium">How this fundraiser works</p>
+              <p className="font-medium">How it works</p>
               <dl className="mt-3 space-y-3 text-char">
                 <div>
                   <dt className="text-ink-black">If the goal is reached</dt>

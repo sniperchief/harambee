@@ -66,7 +66,7 @@ export default async function DashboardPage() {
   const titleById = new Map(created.map((p) => [p.id, p.title]));
   const ledger = (((contribsRes as unknown as { data: Contrib[] | null }).data) ?? []).map((c) => ({
     ...c,
-    poolTitle: titleById.get(c.pool_id) ?? "Fundraiser",
+    poolTitle: titleById.get(c.pool_id) ?? "Untitled",
     from: c.users?.modular_wallet_address ?? null,
   }));
 
@@ -86,7 +86,7 @@ export default async function DashboardPage() {
               <h1 className="type-display mt-3">Your fundraisers</h1>
             </div>
             <PillLink href="/pools/new" className="self-start !border-ink-black sm:self-auto">
-              + Create a fundraiser
+              + Create
             </PillLink>
           </div>
 
@@ -99,14 +99,14 @@ export default async function DashboardPage() {
             {/* Left: stats + recent fundraisers */}
             <div className="space-y-12 lg:col-span-2">
               <div className="grid gap-4 sm:grid-cols-3">
-                <Stat label="Total raised" value={`$${formatUsdc(totalRaised, { decimals: 0 })}`} sub="Across all your fundraisers" />
-                <Stat label="Active fundraisers" value={activeCount} sub="Accepting contributions" />
-                <Stat label="Completed fundraisers" value={releasedCount} sub="Funds sent to recipients" />
+                <Stat label="Total raised" value={`$${formatUsdc(totalRaised, { decimals: 0 })}`} sub="Across everything you’ve created" />
+                <Stat label="Active" value={activeCount} sub="Accepting contributions" />
+                <Stat label="Completed" value={releasedCount} sub="Funds sent to recipients" />
               </div>
 
               <section>
                 <div className="flex items-end justify-between gap-4">
-                  <h2 className="font-champ text-[30px] font-extrabold leading-tight">Recent fundraisers</h2>
+                  <h2 className="font-champ text-[30px] font-extrabold leading-tight">Recent</h2>
                   {recent.length > 0 && (
                     <Link href="/pools" className="border-b-[1.5px] border-ink-black pb-0.5 text-body no-underline">
                       View all
@@ -116,9 +116,9 @@ export default async function DashboardPage() {
                 <div className="mt-5">
                   {recent.length === 0 ? (
                     <WarmCard className="flex flex-col items-center py-16 text-center">
-                      <h3 className="type-heading-sm">No fundraisers yet</h3>
+                      <h3 className="type-heading-sm">Nothing here yet</h3>
                       <p className="mt-3 max-w-sm text-body text-char">
-                        Create your first fundraiser and share the link with people anywhere. It takes about a minute.
+                        Create your first campaign and share the link with people anywhere. It takes about a minute.
                       </p>
                     </WarmCard>
                   ) : (

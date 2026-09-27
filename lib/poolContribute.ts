@@ -99,7 +99,7 @@ async function submitPoolCall(
   // (e.g. the pool closed a moment earlier). That's a failed contribution or
   // refund, not a success — no money moved.
   if (!receipt.success) {
-    throw new Error(`Transaction reverted: ${receipt.reason ?? "the fundraiser rejected it"}`);
+    throw new Error(`Transaction reverted: ${receipt.reason ?? "the escrow rejected it"}`);
   }
   return { txHash: receipt.receipt.transactionHash, address: account.address };
 }

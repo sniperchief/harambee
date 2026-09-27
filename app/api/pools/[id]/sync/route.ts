@@ -27,6 +27,6 @@ export async function POST(
     return NextResponse.json(result);
   } catch (err) {
     console.error("Pool sync failed:", err);
-    return NextResponse.json({ error: "Could not read the fundraiser onchain" }, { status: 502 });
+    return NextResponse.json({ error: "Could not read the latest state onchain" }, { status: 502 });
   }
 }

@@ -78,9 +78,9 @@ export function NotificationToggles() {
     product: false,
   });
   const rows: { key: keyof typeof prefs; title: string; body: string }[] = [
-    { key: "contributions", title: "New contributions", body: "When someone contributes to a fundraiser you're part of." },
-    { key: "releases", title: "Payouts & refunds", body: "When a fundraiser pays out or becomes refundable." },
-    { key: "deadlines", title: "Deadline reminders", body: "A nudge as a fundraiser's deadline approaches." },
+    { key: "contributions", title: "New contributions", body: "When someone contributes to something you created." },
+    { key: "releases", title: "Payouts & refunds", body: "When funds are paid out or become refundable." },
+    { key: "deadlines", title: "Deadline reminders", body: "A nudge as a deadline approaches." },
     { key: "product", title: "Product updates", body: "Occasional news about new Harambee features." },
   ];
   return (

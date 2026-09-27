@@ -41,17 +41,17 @@ export function PoolsExplorer({ pools }: { pools: PoolSummary[] }) {
           <WarmCard className="flex flex-col items-center py-20 text-center">
             <h2 className="type-heading-sm">
               {pools.length === 0
-                ? "No fundraisers yet"
-                : `No ${STATUS_TABS.find((t) => t.key === status)?.label.toLowerCase()} fundraisers`}
+                ? "Nothing here yet"
+                : `Nothing ${STATUS_TABS.find((t) => t.key === status)?.label.toLowerCase()} yet`}
             </h2>
             <p className="mt-3 max-w-sm text-body text-char">
               {pools.length === 0
-                ? "Fundraisers you organize or contribute to will show up here."
+                ? "Everything you create or contribute to will show up here."
                 : "Try another filter."}
             </p>
             {pools.length === 0 && (
               <PillLink href="/pools/new" className="mt-8">
-                + Create a fundraiser
+                + Create
               </PillLink>
             )}
           </WarmCard>
