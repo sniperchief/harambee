@@ -2,9 +2,9 @@
 
 **Raise money together, from anywhere.**
 
-Harambee — Swahili for *"all pull together"* — is a cross-border fundraising platform. An organizer creates a fundraiser with a goal and a deadline, shares one link, and people in any country contribute in USDC instead of sending international bank transfers. Everyone sees the amount raised in real time. Contributions are held in an onchain escrow and leave it only by the fundraiser's rules: paid out to the recipient, or refunded to the contributors.
+Harambee — Swahili for *"all pull together"* — is a cross-border fundraising platform. An organizer creates a fundraiser with a goal and a deadline, shares one link, and people in any country contribute in USDC instead of sending international bank transfers. Everyone sees the amount raised in real time. Contributions are held in an onchain escrow and leave it only by the rules set at the start: paid out to the recipient, or refunded to the contributors.
 
-Powered by **Arc mainnet**, settled in **USDC**, with contributions made using **passkeys** and network fees of a few cents paid in USDC. (In the code and the contract, a fundraiser is called a *pool*.)
+Powered by **Arc mainnet**, settled in **USDC**, with contributions made using **passkeys** and network fees of a few cents paid in USDC.
 
 🔗 **Live demo:** https://harambee-flame.vercel.app
 📖 **Technical docs:** https://harambee-flame.vercel.app/docs
@@ -15,26 +15,26 @@ Powered by **Arc mainnet**, settled in **USDC**, with contributions made using *
 
 When someone needs to raise money — for medical expenses, disaster relief, a funeral, tuition fees, a community project or family support — their supporters are often spread across different countries. International bank transfers can be slow and expensive, and informal collections run on trust and a spreadsheet. Who gave? Where's the money sitting? Can the organizer be trusted not to dip in? What if we don't reach the goal?
 
-Harambee lets people contribute in USDC from anywhere and replaces the trust gap with an onchain escrow: no single person can withdraw early, everyone can see the amount raised in real time, and the fundraiser's rules — set when it's created — decide whether the money goes to the recipient or back to contributors.
+Harambee lets people contribute in USDC from anywhere and replaces the trust gap with an onchain escrow: no single person can withdraw early, everyone can see the amount raised in real time, and rules set at the start decide whether the money goes to the recipient or back to contributors.
 
 ## What it does
 
-- **Create a fundraising campaign** in about a minute — a name, a fundraising goal, a deadline. No bank forms, no crypto jargon.
+- **Create a fundraising campaign** in about a minute — a name, a goal, a deadline. No bank forms, no crypto jargon.
 - **Raise from anywhere.** Share one link; anyone in any country can contribute in USDC by signing in with a **passkey** (Face ID / fingerprint) — no app to download, no international bank transfer.
 - **Real-time progress.** Everyone sees the amount raised, the number of contributors and recent contributions.
 - **Funds are held in escrow**, not a personal account.
-- **Automatic payout** the moment the goal is reached (or at the deadline, depending on the fundraiser's release rule).
-- **Refunds** if an "only if the goal is reached" fundraiser misses its goal — every contributor can claim back exactly what they gave.
-- **Tiny fees.** Contributors pay a few cents of network fee in USDC from their own balance; creating a fundraiser is free.
-- **Local-currency display** — a fundraiser can show its value in NGN, KES, GHS and others using live FX rates (informational; settlement stays in USDC).
+- **Automatic payout** the moment the goal is reached (or at the deadline, depending on the release rule).
+- **Refunds** under the "only if the goal is reached" rule, when the goal is missed — every contributor can claim back exactly what they gave.
+- **Tiny fees.** Contributors pay a few cents of network fee in USDC from their own balance; getting started is free.
+- **Local-currency display** — a campaign can show its value in NGN, KES, GHS and others using live FX rates (informational; settlement stays in USDC).
 
 ## How it works
 
 In the code and the contract, a fundraiser is called a *pool*.
 
-1. **Create** — the organizer sets the fundraising goal and deadline; the app calls `createPool` onchain and returns a shareable link.
+1. **Create** — the organizer sets the goal and deadline; the app calls `createPool` onchain and returns a shareable link.
 2. **Contribute** — each contributor signs `contribute(poolId)` with their own passkey wallet; the USDC is held in the escrow contract. The server verifies the transaction onchain before recording it.
-3. **Pay out or refund** — when the goal is reached or the deadline passes, the escrow either pays everything raised to the recipient or marks the fundraiser refundable so each contributor can claim back their own contribution. The app (and a cron) checks open fundraisers so deadline-based outcomes fire on their own.
+3. **Pay out or refund** — when the goal is reached or the deadline passes, the escrow either pays everything raised to the recipient or marks it refundable so each contributor can claim back their own contribution. The app (and a cron) checks everything still open so deadline-based outcomes fire on their own.
 
 ## Built on Circle
 

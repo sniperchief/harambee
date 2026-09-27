@@ -16,7 +16,7 @@ const STEPS: Feature[] = [
   {
     marker: "01",
     title: "Create a fundraising campaign",
-    body: "Say what you’re raising money for, then set a fundraising goal and a deadline. No bank forms, no jargon.",
+    body: "Say what you’re raising money for, then set a goal and a deadline. No bank forms, no jargon.",
   },
   {
     marker: "02",
@@ -41,7 +41,7 @@ const WHY: Feature[] = [
   },
   {
     title: "Held securely",
-    body: "Contributions wait in escrow — not in anyone’s personal account — until the fundraiser’s rules settle them.",
+    body: "Contributions wait in escrow — not in anyone’s personal account — until the agreed rules settle them.",
   },
 ];
 
@@ -50,7 +50,7 @@ const TRANSPARENCY = [
   "How much has been raised",
   "How many people have contributed",
   "Recent contributions, as they happen",
-  "The fundraising goal and the deadline",
+  "The goal and the deadline",
   "What happens when the goal is reached",
   "What happens if the deadline passes first",
 ];
@@ -67,7 +67,7 @@ const USE_CASES = [
 const FAQ = [
   {
     q: "Where is my money held?",
-    a: "Every contribution goes into an onchain escrow — not a personal account. The money can only leave by the rules set when the fundraiser was created: to the recipient, or back to the contributors. No single person can withdraw early, and the rules can't be changed afterwards.",
+    a: "Every contribution goes into an onchain escrow — not a personal account. The money can only leave by the rules set at the start: to the recipient, or back to the contributors. No single person can withdraw early, and the rules can't be changed afterwards.",
   },
   {
     q: "Can people in other countries contribute?",
@@ -79,11 +79,11 @@ const FAQ = [
   },
   {
     q: "What if we don’t reach the goal?",
-    a: "That depends on the rule the organizer chose when creating the fundraiser. With “only if the goal is reached”, every contributor can claim back exactly what they put in. With the other rules, whatever was raised goes to the recipient at the deadline. The rule is shown on every fundraiser page.",
+    a: "That depends on the rule the organizer chose at the start. With “only if the goal is reached”, every contributor can claim back exactly what they put in. With the other rules, whatever was raised goes to the recipient at the deadline. The rule is always shown on the page.",
   },
   {
     q: "Are there gas fees?",
-    a: "Just a few cents. Each contribution or refund pays a small network fee in USDC from your own balance. Creating a fundraiser is free.",
+    a: "Just a few cents. Each contribution or refund pays a small network fee in USDC from your own balance. Getting started is free.",
   },
 ];
 
@@ -105,7 +105,7 @@ export default async function Home() {
               from anywhere.
             </>
           }
-          subtext="Harambee is a global fundraising platform. Collect USDC contributions from people in any country, without international bank transfers. Everyone sees progress in real time, and funds are held securely until your fundraiser’s rules are met."
+          subtext="Harambee is a global fundraising platform. Collect USDC contributions from people in any country, without international bank transfers. Everyone sees progress in real time, and funds are held securely until your rules are met."
           actions={<PillLink href={startHref}>Fundraise</PillLink>}
         />
 
@@ -133,7 +133,7 @@ export default async function Home() {
               <p className="type-eyebrow">Transparency</p>
               <h2 className="type-heading-lg mt-3">Everyone sees the same numbers</h2>
               <p className="type-subheading mt-5 max-w-lg opacity-80">
-                Every contribution is recorded onchain and shown on the fundraiser page. Contributors can see:
+                Every contribution is recorded onchain and shown publicly. Contributors can see:
               </p>
               <ul className="mt-6 max-w-lg border-t border-ink-black">
                 {TRANSPARENCY.map((t) => (
@@ -214,7 +214,7 @@ export default async function Home() {
           <SectionHeader
             align="center"
             title="Raise money together, from anywhere"
-            lead="Create your first fundraiser in about a minute. No downloads, no jargon."
+            lead="Get started in about a minute. No downloads, no jargon."
           />
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <PillLink href={startHref}>Fundraise</PillLink>

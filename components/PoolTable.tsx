@@ -45,7 +45,7 @@ export function PoolTable({ pools }: { pools: PoolSummary[] }) {
   return (
     <div className="overflow-hidden rounded-[20px] bg-bone-white">
       <div className={`hidden border-b border-ink-black px-6 py-5 text-char ${COLS}`}>
-        <span className="type-eyebrow !text-xs">Fundraiser</span>
+        <span className="type-eyebrow !text-xs">Name</span>
         <span className="type-eyebrow !text-xs">Progress</span>
         <span className="type-eyebrow !text-xs">Raised</span>
         <span className="type-eyebrow !text-xs">Status</span>

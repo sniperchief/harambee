@@ -55,7 +55,7 @@ export default async function ActivityPage() {
       type: "contribution",
       amount: c.amount,
       poolId: c.pools?.id ?? c.pool_id,
-      poolTitle: c.pools?.title ?? "Fundraiser",
+      poolTitle: c.pools?.title ?? "Untitled",
       at: c.created_at,
     });
   }
@@ -81,14 +81,14 @@ export default async function ActivityPage() {
         <Section className="!pt-14" innerClassName="max-w-[880px]">
           <p className="type-eyebrow">Your history</p>
           <h1 className="type-display mt-3">Activity</h1>
-          <p className="mt-4 text-body text-char">Every contribution, payout and refund across your fundraisers.</p>
+          <p className="mt-4 text-body text-char">Every contribution, payout and refund, in one place.</p>
 
           <div className="mt-12">
             {events.length === 0 ? (
               <WarmCard className="flex flex-col items-center py-20 text-center">
                 <h3 className="type-heading-sm">No activity yet</h3>
                 <p className="mt-3 max-w-sm text-body text-char">
-                  Once you create or contribute to a fundraiser, the history shows up here.
+                  Once you create something or contribute, the history shows up here.
                 </p>
               </WarmCard>
             ) : (

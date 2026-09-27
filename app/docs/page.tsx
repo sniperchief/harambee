@@ -84,7 +84,7 @@ export default async function DocsPage() {
         <h1 className="type-display mt-6 max-w-4xl">How Harambee works</h1>
         <p className="type-subheading mt-6 max-w-2xl opacity-80">
           A technical walkthrough of the whole system — from the onchain escrow that holds every
-          fundraiser&apos;s contributions, to the passkey wallets contributors give from, to
+          contribution, to the passkey wallets contributors give from, to
           what&apos;s live today. Powered by Arc, settled in USDC.
         </p>
       </PageSection>
@@ -119,7 +119,7 @@ export default async function DocsPage() {
                 pull together&rdquo; — is a cross-border fundraising platform. An organizer creates a
                 fundraiser with a goal and a deadline, shares one link, and people anywhere in the world
                 contribute in USDC. Everyone sees the amount raised in real time. Contributions are held
-                in an onchain escrow and leave it only by the fundraiser&apos;s rules: paid out to the
+                in an onchain escrow and leave it only by the rules set at the start: paid out to the
                 recipient, or refunded to the contributors.
               </p>
               <p>
@@ -157,14 +157,14 @@ export default async function DocsPage() {
 
           <Section id="lifecycle" title="The fundraiser lifecycle" eyebrow="Flow">
             <p>
-              Every fundraiser moves through the same path. (In code and in the contract a fundraiser is
+              Each one moves through the same path. (In the code and the contract, a fundraiser is
               called a <Code>pool</Code>.)
             </p>
             <ol className="space-y-3">
               <li>
                 <span className="font-semibold text-ink-black">1. Create.</span> The organizer sets a
-                name, fundraising goal, deadline, release rule, and recipient (defaulting to their own
-                wallet). The app calls <Code>createPool</Code> onchain, then stores the fundraiser with
+                name, goal, deadline, release rule, and recipient (defaulting to their own
+                wallet). The app calls <Code>createPool</Code> onchain, then stores it with
                 its real onchain id and a shareable link.
               </li>
               <li>
@@ -172,13 +172,13 @@ export default async function DocsPage() {
                 signs in with a passkey and contributes. Each contribution calls{" "}
                 <Code>contribute(poolId)</Code>, which holds the funds in the escrow contract and
                 records the contributor. The server then checks the transaction onchain before
-                showing it in the fundraiser&apos;s recent contributions.
+                showing it under recent contributions.
               </li>
               <li>
                 <span className="font-semibold text-ink-black">3. Release or refund.</span> When the goal
                 is reached (or the deadline passes, depending on the release rule), the escrow either
-                pays everything raised to the recipient or marks the fundraiser refundable, so each
-                contributor can take back exactly what they put in. The app checks open fundraisers so deadline-based
+                pays everything raised to the recipient or marks it refundable, so each
+                contributor can take back exactly what they put in. The app checks everything still open so deadline-based
                 outcomes fire on their own, with no manual trigger.
               </li>
             </ol>
@@ -195,16 +195,16 @@ export default async function DocsPage() {
                 emits its id in <Code>PoolCreated</Code>.
               </li>
               <li>
-                <Code>contribute(poolId)</Code> — payable; adds to the fundraiser&apos;s total and records{" "}
+                <Code>contribute(poolId)</Code> — payable; adds to the total and records{" "}
                 <Code>msg.sender</Code>&apos;s contribution. The funds stay in the contract.
               </li>
               <li>
                 <Code>checkAndRelease(poolId)</Code> — permissionless; enforces the release rule
                 (goal reached, or deadline passed) and either pays everything raised to the recipient or
-                flips the fundraiser to refundable.
+                flips it to refundable.
               </li>
               <li>
-                <Code>refund(poolId)</Code> — pull-based; once a fundraiser is refundable, each contributor
+                <Code>refund(poolId)</Code> — pull-based; once it is refundable, each contributor
                 claims back exactly what they contributed, once.
               </li>
             </ul>
@@ -332,7 +332,7 @@ export default async function DocsPage() {
               <li>
                 <span className="font-semibold text-ink-black">Credit-card contributions.</span> Let
                 non-crypto users contribute with a card: a card payment on-ramp mints USDC, the platform
-                routes it into the fundraiser on the contributor&apos;s behalf (custodial), and their share is
+                routes it into the campaign on the contributor&apos;s behalf (custodial), and their share is
                 tracked off-chain. This is the custody fork described above.
               </li>
               <li>

@@ -33,10 +33,10 @@ export async function POST(request: NextRequest) {
   try {
     targetAmountWei = parseEther(String(targetAmount));
   } catch {
-    return NextResponse.json({ error: "Invalid fundraising goal" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid goal" }, { status: 400 });
   }
   if (targetAmountWei <= 0n) {
-    return NextResponse.json({ error: "The fundraising goal must be more than 0" }, { status: 400 });
+    return NextResponse.json({ error: "The goal must be more than 0" }, { status: 400 });
   }
 
   const deadlineUnix = Math.floor(new Date(deadline).getTime() / 1000);
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
   const txHash = confirmed.data?.transaction?.txHash;
   if (!txHash) {
     return NextResponse.json(
-      { error: `Fundraiser creation did not confirm (state: ${confirmed.data?.transaction?.state ?? "unknown"})` },
+      { error: `Creation did not confirm (state: ${confirmed.data?.transaction?.state ?? "unknown"})` },
       { status: 502 }
     );
   }
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     onchainPoolId = await getCreatedPoolId(txHash, { recipient, targetAmountWei, deadline: deadlineUnix });
   } catch (err) {
     console.error("Could not confirm the created pool on-chain:", err);
-    return NextResponse.json({ error: "Could not confirm the new fundraiser onchain. Please try again." }, { status: 502 });
+    return NextResponse.json({ error: "Could not confirm it onchain. Please try again." }, { status: 502 });
   }
 
   const { data: pool, error } = await supabase

@@ -116,7 +116,7 @@ function RegisterForm() {
             className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer accent-ink-black"
           />
           <span>
-            I agree that contributions are held in escrow and released only when a fundraiser&apos;s rules are met.
+            I agree that contributions are held in escrow and released only when the agreed rules are met.
           </span>
         </label>
 

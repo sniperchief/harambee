@@ -36,7 +36,7 @@ function StepHeader({ step, done }: { step: number; done: boolean }) {
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
-        <p className="type-eyebrow">{done ? "New fundraiser · Live" : `New fundraiser · Step ${step + 1} of ${STEPS.length}`}</p>
+        <p className="type-eyebrow">{done ? "Live" : `Step ${step + 1} of ${STEPS.length}`}</p>
         {!done && (
           <Link href="/dashboard" className="border-b-[1.5px] border-ink-black pb-0.5 text-body no-underline">
             Cancel
@@ -113,12 +113,12 @@ export function CreatePoolForm() {
         }),
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? "Couldn't create the fundraiser. Please try again.");
+      if (!response.ok) throw new Error(body.error ?? "Couldn't create it. Please try again.");
       setCreatedId(body.pool.id);
       setStatus("done");
     } catch (err) {
       setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Couldn't create the fundraiser. Please try again.");
+      setErrorMessage(err instanceof Error ? err.message : "Couldn't create it. Please try again.");
     }
   }
 
@@ -131,16 +131,16 @@ export function CreatePoolForm() {
         <StepHeader step={STEPS.length - 1} done />
         <SurfaceCard className="mt-8 sm:!p-10">
           <Tag tone="black" small>Live</Tag>
-          <h2 className={`${CARD_TITLE} mt-5`}>Your fundraiser is live</h2>
+          <h2 className={`${CARD_TITLE} mt-5`}>You’re live</h2>
           <p className="mt-3 text-body text-char">
-            Share it with people anywhere to start receiving contributions. Every contribution is held in escrow until the fundraiser&apos;s rules are met.
+            Share it with people anywhere to start receiving contributions. Every contribution is held in escrow until your rules are met.
           </p>
 
           <dl className="mt-8 border-t border-ink-black">
             {[
-              ["Fundraiser", title],
+              ["Name", title],
               [
-                "Fundraising goal",
+                "Goal",
                 `$${formatUsdc(targetAmount)} USDC${
                   targetCurrency && fxRate !== null ? ` · ≈ ${formatLocal(Number(targetAmount) * fxRate, targetCurrency)}` : ""
                 }`,
@@ -163,7 +163,7 @@ export function CreatePoolForm() {
             <div className="w-full min-w-0">
               <p className="text-sm text-char">Share the link, or let people scan the code in person.</p>
               <div className="mt-3 flex items-center gap-2">
-                <InputField readOnly value={link} aria-label="Fundraiser link" className="min-w-0 font-dm-mono text-sm" />
+                <InputField readOnly value={link} aria-label="Share link" className="min-w-0 font-dm-mono text-sm" />
                 <CopyButton text={link} />
               </div>
             </div>
@@ -175,7 +175,7 @@ export function CreatePoolForm() {
             Back to dashboard
           </PillButton>
           <PillButton onClick={() => router.push(`/pools/${createdId}`)} className="!border-ink-black">
-            View fundraiser
+            View page
           </PillButton>
         </div>
       </div>
@@ -196,14 +196,14 @@ export function CreatePoolForm() {
         {step === 0 && (
           <div className="animate-fade-in-still flex flex-col gap-6">
             <h2 className={CARD_TITLE}>What are you raising money for?</h2>
-            <FieldShell label="Fundraiser name" htmlFor="title">
+            <FieldShell label="Name" htmlFor="title">
               <InputField id="title" placeholder="e.g. Help Amara cover her surgery" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             </FieldShell>
             <FieldShell label="Description" htmlFor="desc" hint="Optional — tell contributors what the money is for.">
               <TextAreaField id="desc" placeholder="Amara needs surgery next month. The money raised will cover her hospital bill." value={description} onChange={(e) => setDescription(e.target.value)} />
             </FieldShell>
             <div className="grid gap-6 sm:grid-cols-2 sm:gap-4">
-              <FieldShell label="Fundraising goal (USDC)" htmlFor="target">
+              <FieldShell label="Goal (USDC)" htmlFor="target">
                 <InputField
                   id="target"
                   inputMode="decimal"
@@ -241,7 +241,7 @@ export function CreatePoolForm() {
 
             <fieldset>
               <legend className="text-[15px] font-medium">Deadline</legend>
-              <p className="text-sm text-char">How long the fundraiser accepts contributions. Uses your local time.</p>
+              <p className="text-sm text-char">How long to accept contributions. Uses your local time.</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {DURATIONS.map((d) => (
                   <TagButton key={d.key} selected={durationKey === d.key} onClick={() => setDurationKey(d.key)}>
@@ -300,13 +300,13 @@ export function CreatePoolForm() {
         {/* Step 3 — Review */}
         {step === 2 && (
           <div className="animate-fade-in-still">
-            <h2 className={CARD_TITLE}>Review your fundraiser</h2>
+            <h2 className={CARD_TITLE}>Review</h2>
             <p className="mt-3 text-body text-char">Check the details before it goes live.</p>
             <dl className="mt-8 border-t border-ink-black">
               {[
-                ["Fundraiser name", title],
+                ["Name", title],
                 ["Description", description || "—"],
-                ["Fundraising goal", `$${formatUsdc(targetAmount)} USDC${localPreview ? ` · ≈ ${localPreview}` : ""}`],
+                ["Goal", `$${formatUsdc(targetAmount)} USDC${localPreview ? ` · ≈ ${localPreview}` : ""}`],
                 ["Recipient", recipientWalletAddress || "You"],
                 ["Deadline", computeDeadlineIso() ? formatDateTime(computeDeadlineIso()) : "—"],
                 ["Release rule", RELEASE_RULES[releaseMode].title],
@@ -318,7 +318,7 @@ export function CreatePoolForm() {
               ))}
             </dl>
             <p className="mt-6 text-sm text-char">
-              Creating your fundraiser registers it with the onchain escrow. This takes a few seconds and costs you nothing.
+              This registers it with the onchain escrow. This takes a few seconds and costs you nothing.
             </p>
             {status === "error" && <FormMessage className="mt-5">{errorMessage}</FormMessage>}
           </div>
@@ -345,7 +345,7 @@ export function CreatePoolForm() {
           </PillButton>
         ) : (
           <PillButton className="!border-ink-black" onClick={handleSubmit} disabled={status === "working"}>
-            {status === "working" ? "Creating fundraiser…" : "Create fundraiser"}
+            {status === "working" ? "Creating…" : "Create"}
           </PillButton>
         )}
       </div>
